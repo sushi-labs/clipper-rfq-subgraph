@@ -1,4 +1,4 @@
-specVersion: 0.0.2
+specVersion: 1.2.0
 schema:
   file: ./schema.graphql
 
@@ -12,7 +12,7 @@ dataSources:
       startBlock: {{startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - Deposited
@@ -46,7 +46,7 @@ dataSources:
       startBlock: {{coveStartBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - CoveSwapped

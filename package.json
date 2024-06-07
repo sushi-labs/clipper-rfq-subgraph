@@ -19,8 +19,8 @@
     "deploy:arbitrum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-arbitrum --debug"
   },
   "dependencies": {
-    "@graphprotocol/graph-cli": "0.21.0",
-    "@graphprotocol/graph-ts": "0.20.0"
+    "@graphprotocol/graph-cli": "0.73.0",
+    "@graphprotocol/graph-ts": "0.35.1"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",
