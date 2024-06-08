@@ -53,7 +53,7 @@ export function getDailyPoolStatus(pool: Pool, timestamp: BigInt): DailyPoolStat
     .concat(from.toString())
     .concat(to.toString())
 
-  let dailyPoolStatus = DailyPoolStatus.load(id) as DailyPoolStatus
+  let dailyPoolStatus = DailyPoolStatus.load(id)
 
   if (!dailyPoolStatus) {
     dailyPoolStatus = new DailyPoolStatus(id)
@@ -101,7 +101,7 @@ export function getHourlyPoolStatus(pool: Pool, timestamp: BigInt): HourlyPoolSt
     .concat(from.toString())
     .concat(to.toString())
 
-  let hourlyPoolStatus = HourlyPoolStatus.load(id) as HourlyPoolStatus
+  let hourlyPoolStatus = HourlyPoolStatus.load(id)
 
   if (!hourlyPoolStatus) {
     hourlyPoolStatus = new HourlyPoolStatus(id)

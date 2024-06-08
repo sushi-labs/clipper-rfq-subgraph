@@ -3,7 +3,7 @@ import { User } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
 export function upsertUser(userWallet: string, txTimestamp: BigInt, txVolume: BigDecimal): boolean {
-  let user = User.load(userWallet) as User
+  let user = User.load(userWallet)
   let isNewUser = false
 
   if (!user) {

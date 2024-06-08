@@ -16,7 +16,7 @@
     "deploy:optimism": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-optimism --debug",
     "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
     "deploy:ethereum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-mainnet --debug",
-    "deploy:arbitrum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-arbitrum --debug"
+    "deploy:arbitrum": "graph deploy --studio clipper-arbitrum"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.73.0",
