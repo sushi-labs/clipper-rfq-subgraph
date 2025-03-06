@@ -143,6 +143,8 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   swap.recipient = event.params.recipient
   swap.amountIn = inAmount
   swap.amountOut = outAmount
+  swap.amountInRaw = event.params.inAmount
+  swap.amountOutRaw = event.params.outAmount
   swap.logIndex = event.logIndex
   swap.pricePerInputToken = inputPrice
   swap.pricePerOutputToken = outputPrice
