@@ -10,13 +10,15 @@
     "pre:codegen:moonbeam": "rimraf types && yarn script template --deployment moonbeam",
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
+    "pre:codegen:base": "rimraf types && yarn script template --deployment base",
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-polygon --debug",
     "deploy:moonbase": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbase-alpha --debug",
     "deploy:optimism": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-optimism --debug",
     "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
     "deploy:ethereum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-mainnet --debug",
-    "deploy:arbitrum": "graph deploy --studio clipper-arbitrum"
+    "deploy:arbitrum": "graph deploy --studio clipper-arbitrum",
+    "deploy:base": "graph deploy --studio cllipper-base"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.73.0",

@@ -80,5 +80,11 @@ ShorttailAssets.set(Address.fromString('0x1dc78acda13a8bc4408b207c9e48cdbc096d95
 ShorttailAssets.set(Address.fromString('0xc234a67a4f840e61ade794be47de455361b52413'), 'DAI')
 ShorttailAssets.set(Address.fromString('0x1d4c2a246311bb9f827f4c768e277ff5787b7d7e'), 'MOVR')
 
+// base
+ShorttailAssets.set(Address.fromString('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'), 'USDC')
+ShorttailAssets.set(Address.fromString('0x4200000000000000000000000000000000000006'), 'WETH')
+ShorttailAssets.set(Address.fromString('0x1ceA84203673764244E05693e42E6Ace62bE9BA5'), 'WBTC')
+ShorttailAssets.set(Address.fromString('0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb'), 'DAI')
+
 // ClipperLP
 ShorttailAssets.set(Address.fromString('{{clipperDirectExchange}}'), 'CLPRDRPL')

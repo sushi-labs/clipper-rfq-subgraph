@@ -13,7 +13,7 @@ interface Deployment {
   clipperCove: string
   feeSplit: string
   permitRouter: string
-  farmingHelper: string;
+  farmingHelper: string
 
   // Currencies
   ethOracleAddress: string
@@ -253,6 +253,34 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       usdcOracleAddress: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
       usdtOracleAddress: '0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7',
       arbOracleAddress: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
+    }
+  }
+
+  if (source === 'base') {
+    return {
+      networkName: 'base',
+      startBlock: 11871349,
+      coveStartBlock: 11871349,
+
+      // Core
+      clipperDirectExchange: '0xb32D856cAd3D2EF07C94867A800035E37241247C',
+      clipperCove: '0x0000000000000000000000000000000000000000',
+
+      addressZeroMap: {
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ether',
+        address: '0x0000000000000000000000000000000000000000',
+      },
+
+      ...commonConfig,
+      permitRouter: '0x41c5362ADf3a2Cf6815454F7633172e7F6C1f834',
+
+      // currency oracles
+      ethOracleAddress: '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70',
+      btcOracleAddress: '0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e',
+      daiOracleAddress: '0x591e79239a7d679378ec8c847e5038150364c78f',
+      usdcOracleAddress: '0x7e860098f58bbfc8648a4311b374b1d669a2bc6b',
     }
   }
 
