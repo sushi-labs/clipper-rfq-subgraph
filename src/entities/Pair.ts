@@ -1,6 +1,6 @@
 import { BigDecimal } from '@graphprotocol/graph-ts'
 import { Swapped } from '../../types/ClipperDirectExchange/ClipperDirectExchange'
-import { Pair } from '../../types/schema'
+import { Pair, Pool, PoolPair } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
 export function loadPair(inAsset: string, outAsset: string): Pair {
@@ -34,4 +34,30 @@ export function updatePair(inAsset: string, outAsset: string, addedTxVolume: Big
   pair.save()
 
   return pair
+}
+
+export function loadPoolPair(poolId: string, pairId: string): PoolPair {
+  let poolPairId = poolId.concat(pairId)
+
+  let poolPair = PoolPair.load(poolPairId)
+
+  if (!poolPair) {
+    poolPair = new PoolPair(poolPairId)
+    poolPair.pool = poolId
+    poolPair.pair = pairId
+    poolPair.txCount = BIG_INT_ZERO
+    poolPair.volumeUSD = BIG_DECIMAL_ZERO
+    poolPair.save()
+  }
+
+  return poolPair
+}
+
+export function updatePoolPair(poolId: string, pairId: string, addedTxVolume: BigDecimal): PoolPair {
+  let poolPair = loadPoolPair(poolId, pairId)
+  poolPair.txCount = poolPair.txCount.plus(BIG_INT_ONE)
+  poolPair.volumeUSD = poolPair.volumeUSD.plus(addedTxVolume)
+  poolPair.save()
+
+  return poolPair
 }

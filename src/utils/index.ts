@@ -1,5 +1,5 @@
 import { Address, BigDecimal, BigInt, Bytes } from '@graphprotocol/graph-ts'
-import { Token, TransactionSource } from '../../types/schema'
+import { PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
 import { ShorttailAssets } from '../addresses'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, LongTailType, ShortTailType } from '../constants'
 import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol } from './token'
@@ -30,11 +30,26 @@ export function loadTransactionSource(auxData: Bytes): TransactionSource {
   if (!txSource) {
     txSource = new TransactionSource(txSourceId)
     txSource.txCount = BIG_INT_ZERO
+    txSource.volumeUSD = BIG_DECIMAL_ZERO
 
     txSource.save()
   }
 
   return txSource as TransactionSource
+}
+
+export function loadPoolTransactionSource(poolId: string, txSourceId: string): PoolTransactionSource {
+  let poolTxSourceId = poolId.concat(txSourceId)
+  let poolTxSource = PoolTransactionSource.load(poolTxSourceId)
+  if (!poolTxSource) {
+    poolTxSource = new PoolTransactionSource(poolTxSourceId)
+    poolTxSource.pool = poolId
+    poolTxSource.transactionSource = txSourceId
+    poolTxSource.txCount = BIG_INT_ZERO
+    poolTxSource.volumeUSD = BIG_DECIMAL_ZERO
+    poolTxSource.save()
+  }
+  return poolTxSource
 }
 
 export function loadToken(tokenAddress: Address): Token {

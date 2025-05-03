@@ -51,6 +51,12 @@ type Pool @entity(immutable: false) {
   # time snapshots of pool data
   dailyHistory: [DailyPoolStatus!]! @derivedFrom(field: "pool")
   hourlyHistory: [HourlyPoolStatus!]! @derivedFrom(field: "pool")
+
+  # derived pool transaction sources
+  transactionSources: [PoolTransactionSource!]! @derivedFrom(field: "pool")
+
+  # derived pool pairs
+  pairs: [PoolPair!]! @derivedFrom(field: "pool")
 }
 
 type DailyPoolStatus @entity(immutable: false) {
@@ -216,6 +222,18 @@ type Pair @entity(immutable: false) {
   volumeUSD: BigDecimal!
   # swaps data
   swaps: [Swap!]! @derivedFrom(field: "pair")
+  # derived pool pairs
+  pools: [PoolPair!]! @derivedFrom(field: "pair")
+}
+
+type PoolPair @entity(immutable: false) {
+  id: ID!
+  pool: Pool!
+  pair: Pair!
+  # all time transaction on this pair
+  txCount: BigInt!
+  # volume of all time transactions in USD
+  volumeUSD: BigDecimal!
 }
 
 type TransactionSource @entity(immutable: false) {
@@ -223,8 +241,20 @@ type TransactionSource @entity(immutable: false) {
   id: ID!
   # number of all time transactions by source
   txCount: BigInt!
+  # volume of all time transactions in USD
+  volumeUSD: BigDecimal!
   # derived swaps
   swaps: [Swap!]! @derivedFrom(field: "transactionSource")
+  # derived pool transaction sources
+  pools: [PoolTransactionSource!]! @derivedFrom(field: "transactionSource")
+}
+
+type PoolTransactionSource @entity(immutable: false) {
+  id: ID!
+  pool: Pool!
+  txCount: BigInt!
+  volumeUSD: BigDecimal!
+  transactionSource: TransactionSource!
 }
 
 type User @entity(immutable: false) {
