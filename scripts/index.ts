@@ -19,6 +19,11 @@ interface CoveConfig {
   startBlock: number
 }
 
+interface PriceOracleConfig {
+  symbol: string
+  address: string
+}
+
 interface Deployment {
   networkName: string
   prune: number | 'never' | 'auto'
@@ -26,19 +31,7 @@ interface Deployment {
   pools: PoolConfig[]
   coves: CoveConfig[]
 
-  // Currencies
-  ethOracleAddress: string
-  btcOracleAddress: string
-  daiOracleAddress: string
-  usdcOracleAddress: string
-  usdtOracleAddress: string
-  jpyOracleAddress: string
-  maticOracleAddress: string
-  dotOracleAddress: string
-  linkOracleAddress: string
-  opOracleAddress: string
-  glmrOracleAddress: string
-  arbOracleAddress: string
+  priceOracles: PriceOracleConfig[]
 
   addressZeroMap: {
     symbol: string
@@ -64,18 +57,7 @@ interface Deployment {
 
 async function fetchDeployment(source: string): Promise<Deployment> {
   const commonConfig = {
-    ethOracleAddress: '0x0000000000000000000000000000000000000000',
-    btcOracleAddress: '0x0000000000000000000000000000000000000000',
-    daiOracleAddress: '0x0000000000000000000000000000000000000000',
-    usdcOracleAddress: '0x0000000000000000000000000000000000000000',
-    usdtOracleAddress: '0x0000000000000000000000000000000000000000',
-    jpyOracleAddress: '0x0000000000000000000000000000000000000000',
-    maticOracleAddress: '0x0000000000000000000000000000000000000000',
-    dotOracleAddress: '0x0000000000000000000000000000000000000000',
-    linkOracleAddress: '0x0000000000000000000000000000000000000000',
-    opOracleAddress: '0x0000000000000000000000000000000000000000',
-    glmrOracleAddress: '0x0000000000000000000000000000000000000000',
-    arbOracleAddress: '0x0000000000000000000000000000000000000000',
+    priceOracles: [] as PriceOracleConfig[],
     prune: 'auto' as const,
     // as of 19/03/2022 at 00:20 AM ET.
     fallbackPrices: {
@@ -126,13 +108,16 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
 
-      ethOracleAddress: '0xF9680D99D6C9589e2a93a78A04A279e509205945',
-      btcOracleAddress: '0xDE31F8bFBD8c84b5360CFACCa3539B938dd78ae6',
-      daiOracleAddress: '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D',
-      usdcOracleAddress: '0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7',
-      usdtOracleAddress: '0x0A6513e40db6EB1b165753AD52E80663aeA50545',
-      jpyOracleAddress: '0xD647a6fC9BC6402301583C91decC5989d8Bc382D',
-      maticOracleAddress: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0',
+      priceOracles: [
+        { symbol: 'WETH', address: '0xF9680D99D6C9589e2a93a78A04A279e509205945' },
+        { symbol: 'WBTC', address: '0xDE31F8bFBD8c84b5360CFACCa3539B938dd78ae6' },
+        { symbol: 'DAI', address: '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D' },
+        { symbol: 'USDC', address: '0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7' },
+        { symbol: 'USDT', address: '0x0A6513e40db6EB1b165753AD52E80663aeA50545' },
+        { symbol: 'GYEN', address: '0xD647a6fC9BC6402301583C91decC5989d8Bc382D' },
+        { symbol: 'MATIC', address: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0' },
+        { symbol: 'WMATIC', address: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0' },
+      ],
     }
   }
 
@@ -169,13 +154,15 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
 
-      ethOracleAddress: '0x13e3Ee699D1909E989722E753853AE30b17e08c5',
-      btcOracleAddress: '0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593',
-      daiOracleAddress: '0x8dBa75e83DA73cc766A7e5a0ee71F656BAb470d6',
-      usdcOracleAddress: '0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3',
-      usdtOracleAddress: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E',
-      linkOracleAddress: '0xCc232dcFAAE6354cE191Bd574108c1aD03f86450',
-      opOracleAddress: '0x0D276FC14719f9292D5C1eA2198673d1f4269246',
+      priceOracles: [
+        { symbol: 'WETH', address: '0x13e3Ee699D1909E989722E753853AE30b17e08c5' },
+        { symbol: 'WBTC', address: '0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593' },
+        { symbol: 'DAI', address: '0x8dBa75e83DA73cc766A7e5a0ee71F656BAb470d6' },
+        { symbol: 'USDC', address: '0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3' },
+        { symbol: 'USDT', address: '0xECef79E109e997bCA29c1c0897ec9d7b03647F5E' },
+        { symbol: 'LINK', address: '0xCc232dcFAAE6354cE191Bd574108c1aD03f86450' },
+        { symbol: 'OP', address: '0x0D276FC14719f9292D5C1eA2198673d1f4269246' },
+      ],
     }
   }
 
@@ -204,11 +191,13 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000802',
       },
 
-      ethOracleAddress: '0x9ce2388a1696e22F870341C3FC1E89710C7569B5',
-      btcOracleAddress: '0x8c4425e141979c66423A83bE2ee59135864487Eb',
-      usdcOracleAddress: '0xA122591F60115D63421f66F752EF9f6e0bc73abC',
-      dotOracleAddress: '0x1466b4bD0C4B6B8e1164991909961e0EE6a66d8c',
-      glmrOracleAddress: '0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb',
+      priceOracles: [
+        { symbol: 'WETH', address: '0x9ce2388a1696e22F870341C3FC1E89710C7569B5' },
+        { symbol: 'WBTC', address: '0x8c4425e141979c66423A83bE2ee59135864487Eb' },
+        { symbol: 'USDC', address: '0xA122591F60115D63421f66F752EF9f6e0bc73abC' },
+        { symbol: 'DOT', address: '0x1466b4bD0C4B6B8e1164991909961e0EE6a66d8c' },
+        { symbol: 'GLMR', address: '0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb' },
+      ],
     }
   }
 
@@ -250,11 +239,13 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 12), // 1.5 months of blocks with 12s block time
 
-      ethOracleAddress: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
-      btcOracleAddress: '0xf4030086522a5beea4988f8ca5b36dbc97bee88c',
-      daiOracleAddress: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
-      usdcOracleAddress: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',
-      usdtOracleAddress: '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',
+      priceOracles: [
+        { symbol: 'WETH', address: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419' },
+        { symbol: 'WBTC', address: '0xf4030086522a5beea4988f8ca5b36dbc97bee88c' },
+        { symbol: 'DAI', address: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9' },
+        { symbol: 'USDC', address: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6' },
+        { symbol: 'USDT', address: '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D' },
+      ],
     }
   }
 
@@ -294,12 +285,14 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 0.25), // 1.5 months of blocks with 0.25s block time
 
-      ethOracleAddress: '0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612',
-      btcOracleAddress: '0x6ce185860a4963106506C203335A2910413708e9',
-      daiOracleAddress: '0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB',
-      usdcOracleAddress: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
-      usdtOracleAddress: '0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7',
-      arbOracleAddress: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
+      priceOracles: [
+        { symbol: 'WETH', address: '0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612' },
+        { symbol: 'WBTC', address: '0x6ce185860a4963106506C203335A2910413708e9' },
+        { symbol: 'DAI', address: '0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB' },
+        { symbol: 'USDC', address: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3' },
+        { symbol: 'USDT', address: '0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7' },
+        { symbol: 'ARB', address: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6' },
+      ],
     }
   }
 
@@ -325,10 +318,12 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
 
-      ethOracleAddress: '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70',
-      btcOracleAddress: '0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e',
-      daiOracleAddress: '0x591e79239a7d679378ec8c847e5038150364c78f',
-      usdcOracleAddress: '0x7e860098f58bbfc8648a4311b374b1d669a2bc6b',
+      priceOracles: [
+        { symbol: 'WETH', address: '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70' },
+        { symbol: 'WBTC', address: '0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e' },
+        { symbol: 'DAI', address: '0x591e79239a7d679378ec8c847e5038150364c78f' },
+        { symbol: 'USDC', address: '0x7e860098f58bbfc8648a4311b374b1d669a2bc6b' },
+      ],
     }
   }
 
