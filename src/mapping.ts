@@ -2,10 +2,10 @@ import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
 import { AssetWithdrawn, Deposited, Swapped, Transfer, Withdrawn } from '../types/ClipperDirectExchange/ClipperDirectExchange'
 import { Deposit, Swap, Withdrawal } from '../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE } from './constants'
-import { updatePair } from './entities/Pair'
+import { updatePair, updatePoolPair } from './entities/Pair'
 import { getDailyPoolStatus, getHourlyPoolStatus, loadPool, updatePoolStatus } from './entities/Pool'
 import { upsertUser } from './entities/User'
-import { convertTokenToDecimal, loadToken, loadTransactionSource } from './utils'
+import { convertTokenToDecimal, loadPoolTransactionSource, loadToken, loadTransactionSource } from './utils'
 import { getCurrentPoolLiquidity, getPoolTokenSupply } from './utils/pool'
 import { getUsdPrice } from './utils/prices'
 import { fetchTokenBalance } from './utils/token'
@@ -107,6 +107,7 @@ export function handleSingleAssetWithdrawn(event: AssetWithdrawn): void {
 }
 
 export function handleSwapped(event: Swapped): void {
+  let poolId = event.address.toHexString()
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
   let poolAddress = clipperDirectExchangeAddress
@@ -147,7 +148,7 @@ export function handleSwapped(event: Swapped): void {
   swap.pricePerOutputToken = outputPrice
   swap.amountInUSD = amountInUsd
   swap.amountOutUSD = amountOutUsd
-  swap.pool = clipperDirectExchangeAddress.toHexString()
+  swap.pool = poolId
   swap.swapType = 'POOL'
 
   let feeUSD = amountInUsd.minus(amountOutUsd).lt(BIG_DECIMAL_ZERO) ? BIG_DECIMAL_ZERO : amountInUsd.minus(amountOutUsd)
@@ -180,14 +181,19 @@ export function handleSwapped(event: Swapped): void {
   }
 
   let txSource = loadTransactionSource(event.params.auxiliaryData)
+  let poolTxSource = loadPoolTransactionSource(poolId, txSource.id)
   swap.transactionSource = txSource.id
   txSource.txCount = txSource.txCount.plus(BIG_INT_ONE)
+  txSource.volumeUSD = txSource.volumeUSD.plus(transactionVolume)
+  poolTxSource.txCount = poolTxSource.txCount.plus(BIG_INT_ONE)
+  poolTxSource.volumeUSD = poolTxSource.volumeUSD.plus(transactionVolume)
 
   let workingPair = updatePair(
     event.params.inAsset.toHexString(),
     event.params.outAsset.toHexString(),
     transactionVolume,
   )
+  updatePoolPair(poolId, workingPair.id, transactionVolume)
   let isUnique = upsertUser(event.transaction.from.toHexString(), event.block.timestamp, transactionVolume)
   swap.pair = workingPair.id
   swap.sender = event.transaction.from.toHexString()
@@ -195,6 +201,7 @@ export function handleSwapped(event: Swapped): void {
 
   swap.save()
   txSource.save()
+  poolTxSource.save()
 }
 
 export function handleTransfer(event: Transfer): void {
