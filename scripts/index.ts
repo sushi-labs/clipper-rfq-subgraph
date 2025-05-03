@@ -348,6 +348,14 @@ yargs(hideBin(process.argv))
     async args => {
       const deploymentJson = await fetchDeployment(args.deployment)
 
+      handlebars.registerHelper('ifAddress', function(possibleAddress: string, options: any) {
+        if (isAddress(possibleAddress)) {
+          return options.fn(this)
+        } else {
+          return options.inverse(this)
+        }
+      })
+
       {
         console.log('Generating subgraph manifest')
 
@@ -367,17 +375,6 @@ yargs(hideBin(process.argv))
         const templateFile = path.join(__dirname, '../templates/addresses.ts.hbs')
         const outputFile = path.join(__dirname, '../src/addresses.ts')
         const templateContent = fs.readFileSync(templateFile, 'utf8')
-
-        // @ts-ignore
-        handlebars.registerHelper('ifAddress', function(possibleAddress: string, options: any) {
-          if (isAddress(possibleAddress)) {
-            // @ts-ignore
-            return options.fn(this)
-          } else {
-            // @ts-ignore
-            return options.inverse(this)
-          }
-        })
 
         const compile = handlebars.compile(templateContent)
         const replaced = compile(deploymentJson)

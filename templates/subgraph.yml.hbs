@@ -50,6 +50,9 @@ dataSources:
           handler: handleSwapped
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+          {{#ifAddress permitRouter}}
+          topic1: ['{{permitRouter}}']
+          {{/ifAddress}}
       file: ./src/mapping.ts
 {{/each}}
 {{#each coves}}
@@ -138,6 +141,9 @@ templates:
           handler: handleSwapped
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
+          {{#ifAddress permitRouter}}
+          topic1: ['{{permitRouter}}']
+          {{/ifAddress}}
       file: ./src/mapping.ts
   - name: ClipperCove
     kind: ethereum/contract
