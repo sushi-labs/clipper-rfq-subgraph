@@ -1,8 +1,8 @@
 import { Address, BigDecimal, dataSource } from '@graphprotocol/graph-ts'
 import { CoveDeposited, CoveSwapped, CoveWithdrawn } from '../types/ClipperCove/ClipperCove'
-import { CoveDeposit, CoveWithdrawal, DailyPoolStatus, Swap } from '../types/schema'
+import { CoveDeposit, CoveWithdrawal, Swap } from '../types/schema'
 import { AddressZeroAddress, clipperDirectExchangeAddress } from './addresses'
-import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, BIG_INT_ONE, BIG_INT_ZERO, LongTailType } from './constants'
+import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, LongTailType } from './constants'
 import {
   loadAllCoveStatus,
   loadCove,

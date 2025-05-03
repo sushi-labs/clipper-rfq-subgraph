@@ -7,11 +7,13 @@ interface Deployment {
   networkName: string
   startBlock: number
   coveStartBlock: number
+  prune: number | 'never' | 'auto'
 
   // Core
   clipperDirectExchange: string
   clipperCove: string
   feeSplit: string
+  farmFeeSplit: string
   permitRouter: string
   farmingHelper: string
 
@@ -65,9 +67,11 @@ async function fetchDeployment(source: string): Promise<Deployment> {
     opOracleAddress: '0x0000000000000000000000000000000000000000',
     glmrOracleAddress: '0x0000000000000000000000000000000000000000',
     feeSplit: '0x0000000000000000000000000000000000000000',
+    farmFeeSplit: '0x0000000000000000000000000000000000000000',
     permitRouter: '0x0000000000000000000000000000000000000000',
     arbOracleAddress: '0x0000000000000000000000000000000000000000',
     farmingHelper: '0x0000000000000000000000000000000000000000',
+    prune: 'auto' as const,
     // as of 19/03/2022 at 00:20 AM ET.
     fallbackPrices: {
       WETH: 2948.37,
@@ -101,6 +105,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
       ...commonConfig,
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2.15), // 1.5 months of blocks with 2.15s block time
       permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
 
       // Currencies
@@ -158,6 +163,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
       ...commonConfig,
       farmingHelper: '0x55f7c152b0C3cc1cD7479e4858Ac07f50D7fcFAD',
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
       permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
 
       // Currencies
@@ -205,7 +211,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       coveStartBlock: 15819271,
 
       // Core
-      clipperDirectExchange: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c',
+      clipperDirectExchange: '0x655eDCE464CC797526600a462A8154650EEe4B77',
       clipperCove: '0x44d097113DBEad613fde74b387081FB3b547C54f',
 
       addressZeroMap: {
@@ -216,7 +222,9 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       },
 
       ...commonConfig,
-      feeSplit: '0x51b0efa27ff4f29f8315496f01952377d581ce73',
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 12), // 1.5 months of blocks with 12s block time
+      feeSplit: '0x84f4625C3E92b368E403cB002A9bF9bc7a9ae1b9',
+      farmFeeSplit: '0xD0454428ecd868A9AC615125FCbDB5Da9027436e',
       // currency oracles
       ethOracleAddress: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
       btcOracleAddress: '0xf4030086522a5beea4988f8ca5b36dbc97bee88c',
@@ -244,6 +252,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       },
 
       ...commonConfig,
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 0.25), // 1.5 months of blocks with 0.25s block time
       permitRouter: '0x93a5943e3091e94aA16f0813BB6901C3E9D4eB98',
 
       // currency oracles
@@ -274,6 +283,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       },
 
       ...commonConfig,
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
       permitRouter: '0x41c5362ADf3a2Cf6815454F7633172e7F6C1f834',
 
       // currency oracles

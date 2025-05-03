@@ -12,16 +12,16 @@
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",
     "codegen": "graph codegen --output-dir ./types",
-    "deploy:polygon": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-polygon --debug",
+    "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:moonbase": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbase-alpha --debug",
-    "deploy:optimism": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-optimism --debug",
+    "deploy:optimism": "graph deploy clipper-optimism",
     "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
-    "deploy:ethereum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-mainnet --debug",
-    "deploy:arbitrum": "graph deploy --studio clipper-arbitrum",
+    "deploy:ethereum": "graph deploy clipper-mainnet",
+    "deploy:arbitrum": "graph deploy clipper-arbitrum",
     "deploy:base": "graph deploy --studio cllipper-base"
   },
   "dependencies": {
-    "@graphprotocol/graph-cli": "0.73.0",
+    "@graphprotocol/graph-cli": "0.97.0",
     "@graphprotocol/graph-ts": "0.35.1"
   },
   "devDependencies": {
@@ -34,9 +34,9 @@
     "glob": "^7.2.0",
     "handlebars": "^4.7.7",
     "prettier": "^1.18.2",
-    "rimraf": "^3.0.2",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.4.0",
-    "typescript": "^3.5.2",
+    "typescript": "^4.9.2",
     "yargs": "^17.3.1"
   }
 }

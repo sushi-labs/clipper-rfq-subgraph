@@ -2,6 +2,9 @@ specVersion: 1.2.0
 schema:
   file: ./schema.graphql
 
+indexerHints:
+  prune: {{prune}}
+
 dataSources:
   - name: ClipperDirectExchange
     kind: ethereum/contract
@@ -10,6 +13,38 @@ dataSources:
       address: '{{clipperDirectExchange}}'
       abi: ClipperDirectExchange
       startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Deposited
+        - Withdrawn
+        - Swapped
+      abis:
+        - name: ClipperDirectExchange
+          file: ./abis/ClipperDirectExchange.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: AggregatorV3Interface
+          file: ./abis/AggregatorV3Interface.json
+      eventHandlers:
+        - event: Deposited(indexed address,uint256,uint256)
+          handler: handleDeposited
+        - event: Withdrawn(indexed address,uint256,uint256)
+          handler: handleWithdrawn
+        - event: AssetWithdrawn(indexed address,uint256,indexed address,uint256)
+          handler: handleSingleAssetWithdrawn
+        - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
+          handler: handleSwapped
+      file: ./src/mapping.ts
+  - name: OldClipperDirectExchange
+    kind: ethereum/contract
+    network: mainnet
+    source:
+      address: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c'
+      abi: ClipperDirectExchange
+      startBlock: 15277939
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
