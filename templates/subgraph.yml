@@ -1,6 +1,9 @@
-specVersion: 0.0.4
+specVersion: 1.2.0
 schema:
   file: ./schema.graphql
+
+indexerHints:
+  prune: {{prune}}
 
 dataSources:
   - name: ClipperDirectExchange
@@ -12,7 +15,7 @@ dataSources:
       startBlock: {{startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.6
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - Deposited
@@ -44,7 +47,7 @@ dataSources:
       startBlock: 15277939
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.6
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - Deposited
@@ -78,7 +81,7 @@ dataSources:
       startBlock: {{coveStartBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.6
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - CoveSwapped

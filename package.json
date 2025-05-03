@@ -11,16 +11,16 @@
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "codegen": "graph codegen --output-dir ./types",
-    "deploy:polygon": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-polygon --debug",
+    "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:moonbase": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbase-alpha --debug",
-    "deploy:optimism": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-optimism --debug",
+    "deploy:optimism": "graph deploy clipper-optimism",
     "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
-    "deploy:ethereum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-mainnet",
-    "deploy:arbitrum": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-arbitrum --debug"
+    "deploy:ethereum": "graph deploy clipper-mainnet",
+    "deploy:arbitrum": "graph deploy clipper-arbitrum"
   },
   "dependencies": {
-    "@graphprotocol/graph-cli": "0.58.0",
-    "@graphprotocol/graph-ts": "0.31.0"
+    "@graphprotocol/graph-cli": "0.97.0",
+    "@graphprotocol/graph-ts": "0.35.1"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",

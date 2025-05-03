@@ -13,7 +13,7 @@ enum StatusHistoricType {
   DAILY
 }
 
-type Pool @entity {
+type Pool @entity(immutable: false) {
   # pool address
   id: ID!
   # all time USD swapped
@@ -53,7 +53,7 @@ type Pool @entity {
   hourlyHistory: [HourlyPoolStatus!]! @derivedFrom(field: "pool")
 }
 
-type DailyPoolStatus @entity {
+type DailyPoolStatus @entity(immutable: false) {
   id: ID!
   from: BigInt!
   to: BigInt!
@@ -92,7 +92,7 @@ type DailyPoolStatus @entity {
   poolValue: BigDecimal!
 }
 
-type HourlyPoolStatus @entity {
+type HourlyPoolStatus @entity(immutable: false) {
   id: ID!
   from: BigInt!
   to: BigInt!
@@ -129,7 +129,7 @@ type HourlyPoolStatus @entity {
   poolValue: BigDecimal!
 }
 
-type Token @entity {
+type Token @entity(immutable: false) {
   # token address
   id: ID!
   # token symbol
@@ -203,7 +203,7 @@ type Swap @entity(immutable: true) {
   amountOutRaw: BigInt!
 }
 
-type Pair @entity {
+type Pair @entity(immutable: false) {
   # asset 1 + asset 2 address
   id: ID!
   # asset 0 of the pair
@@ -218,7 +218,7 @@ type Pair @entity {
   swaps: [Swap!]! @derivedFrom(field: "pair")
 }
 
-type TransactionSource @entity {
+type TransactionSource @entity(immutable: false) {
   # origin name
   id: ID!
   # number of all time transactions by source
@@ -227,7 +227,7 @@ type TransactionSource @entity {
   swaps: [Swap!]! @derivedFrom(field: "transactionSource")
 }
 
-type User @entity {
+type User @entity(immutable: false) {
   # wallet address
   id: ID!
   # number of all time transactions by user
@@ -286,7 +286,7 @@ type CoveWithdrawal @entity(immutable: true) {
   withdrawer: Bytes!
 }
 
-type AllCoveStatus @entity {
+type AllCoveStatus @entity(immutable: false) {
   "Id of smart contract"
   id: ID!
   volumeUSD: BigDecimal!
@@ -295,7 +295,7 @@ type AllCoveStatus @entity {
   withdrawalCount: Int!
 }
 
-type AllCovesHistoricStatus @entity {
+type AllCovesHistoricStatus @entity(immutable: false) {
   id: ID!
   from: BigInt!
   to: BigInt!
@@ -306,7 +306,7 @@ type AllCovesHistoricStatus @entity {
   statusType: StatusHistoricType!
 }
 
-type Cove @entity {
+type Cove @entity(immutable: false) {
   id: ID!
   # pointer to CoveAsset
   longtailAsset: Token!
@@ -339,7 +339,7 @@ type Cove @entity {
   withdrawalCount: BigInt!
 }
 
-type HistoricCoveStatus @entity {
+type HistoricCoveStatus @entity(immutable: false) {
   id: ID!
   cove: Cove!
   from: BigInt!
@@ -352,7 +352,7 @@ type HistoricCoveStatus @entity {
   statusType: StatusHistoricType!
 }
 
-type UserCoveStake @entity {
+type UserCoveStake @entity(immutable: false) {
   # {coveId}-{wallet}
   id: ID!
   cove: Cove!
