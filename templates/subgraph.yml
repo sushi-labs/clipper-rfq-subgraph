@@ -37,6 +37,8 @@ dataSources:
           handler: handleSingleAssetWithdrawn
         - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
           handler: handleSwapped
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
       file: ./src/mapping.ts
   - name: OldClipperDirectExchange
     kind: ethereum/contract
