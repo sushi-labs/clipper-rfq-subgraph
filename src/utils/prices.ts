@@ -1,7 +1,7 @@
 import { Address, BigDecimal, BigInt, TypedMap } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
 import { AggregatorV3Interface } from '../../types/ClipperDirectExchange/AggregatorV3Interface'
-import { clipperDirectExchangeAddress, FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
+import { FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
 import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN } from '../constants'
 import { getCoveBalances } from './cove'
 import { getCurrentPoolLiquidity, getPoolTokenSupply } from './pool'
@@ -30,11 +30,10 @@ export function getUsdPrice(tokenSymbol: string): BigDecimal {
   return usdValue
 }
 
-export function getCoveAssetPrice(coveAddress: Address, decimals: number): TypedMap<string, BigDecimal> {
-  let balances = getCoveBalances(coveAddress, decimals)
+export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAddress: Address, decimals: number): TypedMap<string, BigDecimal> {
+  let balances = getCoveBalances(coveAddress, tokenAddress, decimals)
   let poolTokens = balances[0]
   let longtailAssetBalance = balances[1]
-  let poolId = clipperDirectExchangeAddress.toHexString()
 
   // gets the USD liquidity in our current pool
   let currentPoolLiquidity = getCurrentPoolLiquidity(poolId)

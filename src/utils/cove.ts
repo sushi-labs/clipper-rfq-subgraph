@@ -1,12 +1,11 @@
 import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import { convertTokenToDecimal } from ".";
 import { ClipperCove } from "../../types/ClipperCove/ClipperCove";
-import { clipperCoveAddress } from "../addresses";
 import { BIG_INT_EIGHTEEN } from "../constants";
 
-export function getCoveBalances(coveAddress: Address, decimals: number): Array<BigDecimal> {
-  let coveContract = ClipperCove.bind(clipperCoveAddress)
-  let lastBalances = coveContract.lastBalances(coveAddress)
+export function getCoveBalances(coveAddress: Address, tokenAddress: Address, decimals: number): Array<BigDecimal> {
+  let coveContract = ClipperCove.bind(coveAddress)
+  let lastBalances = coveContract.lastBalances(tokenAddress)
   
   let lpTokens = lastBalances.rightShift(128)
   let mask = (BigInt.fromI32(1).leftShift(128)).minus(BigInt.fromI32(1))
@@ -18,11 +17,18 @@ export function getCoveBalances(coveAddress: Address, decimals: number): Array<B
   return [poolTokens, assetBalance]
 }
 
-export function getCoveInternalDepositSupply(coveAddress: Address): BigInt {
-  let coveContract = ClipperCove.bind(clipperCoveAddress)
-  let totalDepositSupply = coveContract.totalDepositTokenSupply(coveAddress)
+export function getCoveInternalDepositSupply(coveAddress: Address, tokenAddress: Address): BigInt {
+  let coveContract = ClipperCove.bind(coveAddress)
+  let totalDepositSupply = coveContract.totalDepositTokenSupply(tokenAddress)
   
   return totalDepositSupply
+}
+
+export function getCovePoolAddress(coveAddress: Address): Address {
+  let coveContract = ClipperCove.bind(coveAddress)
+  let poolAddress = coveContract.CLIPPER_EXCHANGE()
+  
+  return poolAddress
 }
 
 // export function get

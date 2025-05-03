@@ -1,19 +1,31 @@
 import { Bytes, BigInt, Address } from '@graphprotocol/graph-ts'
 import { AllCovesHistoricStatus, AllCoveStatus, Cove, HistoricCoveStatus, UserCoveStake } from '../../types/schema'
-import { clipperCoveAddress } from '../addresses'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, ONE_DAY, ONE_HOUR } from '../constants'
 import { loadToken } from '../utils'
 import { getOpenTime } from '../utils/timeHelpers'
+import { loadPool } from './Pool'
+import { getCovePoolAddress } from '../utils/cove'
 
-export function loadCove(tokenAddress: Address, creator: Bytes, timestamp: BigInt, transaction: Bytes): Cove {
-  let id = tokenAddress.toHexString()
+export function loadCove(
+  coveAddress: Address,
+  tokenAddress: Address,
+  creator: Bytes,
+  timestamp: BigInt,
+  transaction: Bytes,
+): Cove {
+  let id = coveAddress
+    .toHexString()
+    .concat('-')
+    .concat(tokenAddress.toHexString())
   let cove = Cove.load(id)
 
   if (!cove) {
     let coveAsset = loadToken(tokenAddress)
+    let poolAddress = getCovePoolAddress(coveAddress)
+    let pool = loadPool(poolAddress)
 
     cove = new Cove(id)
-
+    cove.pool = pool.id
     cove.longtailAsset = coveAsset.id
     cove.coveAssetName = coveAsset.name
     cove.coveAssetSymbol = coveAsset.symbol
@@ -59,11 +71,11 @@ export function loadUserCoveStake(coveId: string, userWallet: Address): UserCove
   return stake as UserCoveStake
 }
 
-export function loadAllCoveStatus(): AllCoveStatus {
-  let allStatus = AllCoveStatus.load(clipperCoveAddress.toHexString())
+export function loadAllCoveStatus(coveAddress: Address): AllCoveStatus {
+  let allStatus = AllCoveStatus.load(coveAddress.toHexString())
 
   if (!allStatus) {
-    allStatus = new AllCoveStatus(clipperCoveAddress.toHexString())
+    allStatus = new AllCoveStatus(coveAddress.toHexString())
 
     allStatus.txCount = 0
     allStatus.depositCount = 0
@@ -76,12 +88,12 @@ export function loadAllCoveStatus(): AllCoveStatus {
   return allStatus as AllCoveStatus
 }
 
-export function loadHistoricAllCoveStatus(timestamp: BigInt, statusType: string): AllCovesHistoricStatus {
+export function loadHistoricAllCoveStatus(coveAddress: Address, timestamp: BigInt, statusType: string): AllCovesHistoricStatus {
   let timeRange = statusType === 'HOURLY' ? ONE_HOUR : ONE_DAY
   let openTime = getOpenTime(timestamp, timeRange)
   let from = openTime
   let to = openTime.plus(timeRange).minus(BIG_INT_ONE)
-  let id = clipperCoveAddress
+  let id = coveAddress
     .toHexString()
     .concat('-')
     .concat(from.toString())

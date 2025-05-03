@@ -57,6 +57,9 @@ type Pool @entity(immutable: false) {
 
   # derived pool pairs
   pairs: [PoolPair!]! @derivedFrom(field: "pool")
+
+  # derived pool coves
+  coves: [Cove!]! @derivedFrom(field: "pool")
 }
 
 type DailyPoolStatus @entity(immutable: false) {
@@ -257,6 +260,14 @@ type PoolTransactionSource @entity(immutable: false) {
   transactionSource: TransactionSource!
 }
 
+type CoveTransactionSource @entity(immutable: false) {
+  id: ID!
+  cove: Cove!
+  transactionSource: TransactionSource!
+  txCount: BigInt!
+  volumeUSD: BigDecimal!
+}
+
 type User @entity(immutable: false) {
   # wallet address
   id: ID!
@@ -338,6 +349,7 @@ type AllCovesHistoricStatus @entity(immutable: false) {
 
 type Cove @entity(immutable: false) {
   id: ID!
+  pool: Pool!
   # pointer to CoveAsset
   longtailAsset: Token!
   # duplicate of longtailAsset for easy filtering
@@ -367,6 +379,8 @@ type Cove @entity(immutable: false) {
   depositCount: BigInt!
   # all time withdrawals count
   withdrawalCount: BigInt!
+  # derived cove transaction sources
+  transactionSources: [CoveTransactionSource!]! @derivedFrom(field: "cove")
 }
 
 type HistoricCoveStatus @entity(immutable: false) {

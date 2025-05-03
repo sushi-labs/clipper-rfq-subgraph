@@ -1,5 +1,5 @@
 import { Address, BigDecimal, BigInt, Bytes } from '@graphprotocol/graph-ts'
-import { PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
+import { CoveTransactionSource, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
 import { ShorttailAssets } from '../addresses'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, LongTailType, ShortTailType } from '../constants'
 import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol } from './token'
@@ -50,6 +50,20 @@ export function loadPoolTransactionSource(poolId: string, txSourceId: string): P
     poolTxSource.save()
   }
   return poolTxSource
+}
+
+export function loadCoveTransactionSource(coveId: string, txSourceId: string): CoveTransactionSource {
+  let coveTxSourceId = coveId.concat(txSourceId)
+  let coveTxSource = CoveTransactionSource.load(coveTxSourceId)
+  if (!coveTxSource) {
+    coveTxSource = new CoveTransactionSource(coveTxSourceId)
+    coveTxSource.cove = coveId
+    coveTxSource.transactionSource = txSourceId
+    coveTxSource.txCount = BIG_INT_ZERO
+    coveTxSource.volumeUSD = BIG_DECIMAL_ZERO
+    coveTxSource.save()
+  }
+  return coveTxSource
 }
 
 export function loadToken(tokenAddress: Address): Token {
