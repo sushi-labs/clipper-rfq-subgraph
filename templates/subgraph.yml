@@ -6,11 +6,12 @@ indexerHints:
   prune: {{prune}}
 
 dataSources:
-  - name: ClipperDirectExchange
+{{#each pools}}
+  - name: ClipperDirectExchange_{{address}}
     kind: ethereum/contract
-    network: {{networkName}}
+    network: {{../networkName}}
     source:
-      address: '{{clipperDirectExchange}}'
+      address: '{{address}}'
       abi: ClipperDirectExchange
       startBlock: {{startBlock}}
     mapping:
@@ -18,9 +19,19 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Deposited
-        - Withdrawn
-        - Swapped
+        - Pool
+        - DailyPoolStatus
+        - HourlyPoolStatus
+        - PoolPair
+        - PoolTransactionSource
+        - Deposit
+        - Withdrawal
+        - Token
+        - Swap
+        - Pair
+        - PoolPair
+        - TransactionSource
+        - User
       abis:
         - name: ClipperDirectExchange
           file: ./abis/ClipperDirectExchange.json
@@ -40,55 +51,32 @@ dataSources:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
       file: ./src/mapping.ts
-  - name: OldClipperDirectExchange
+{{/each}}
+{{#each coves}}
+  - name: ClipperCove_{{address}}
     kind: ethereum/contract
-    network: mainnet
+    network: {{../networkName}}
     source:
-      address: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c'
-      abi: ClipperDirectExchange
-      startBlock: 15277939
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      entities:
-        - Deposited
-        - Withdrawn
-        - Swapped
-      abis:
-        - name: ClipperDirectExchange
-          file: ./abis/ClipperDirectExchange.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-        - name: AggregatorV3Interface
-          file: ./abis/AggregatorV3Interface.json
-      eventHandlers:
-        - event: Deposited(indexed address,uint256,uint256)
-          handler: handleDeposited
-        - event: Withdrawn(indexed address,uint256,uint256)
-          handler: handleWithdrawn
-        - event: AssetWithdrawn(indexed address,uint256,indexed address,uint256)
-          handler: handleSingleAssetWithdrawn
-        - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
-          handler: handleSwapped
-        - event: Transfer(indexed address,indexed address,uint256)
-          handler: handleTransfer
-      file: ./src/mapping.ts
-  - name: ClipperCove
-    kind: ethereum/contract
-    network: {{networkName}}
-    source: 
-      address: '{{clipperCove}}'
+      address: '{{address}}'
       abi: ClipperCove
-      startBlock: {{coveStartBlock}}
+      startBlock: {{startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - CoveSwapped
-        - CoveDeposited
-        - CoveWithdrawn
+        - Swap
+        - Token
+        - CoveTransactionSource
+        - TransactionSource
+        - CoveDeposit
+        - CoveWithdrawal
+        - Cove
+        - HistoricCoveStatus
+        - UserCoveStake
+        - AllCovesHistoricStatus
+        - AllCoveStatus
+        - User
       abis:
         - name: ClipperCove
           file: ./abis/ClipperCove.json
@@ -106,3 +94,4 @@ dataSources:
         - event: CoveWithdrawn(indexed address,indexed address,uint256,uint256)
           handler: handleCoveWithdrawn
       file: ./src/coveMapping.ts
+{{/each}}

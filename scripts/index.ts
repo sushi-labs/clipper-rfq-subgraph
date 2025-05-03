@@ -1,21 +1,30 @@
 import fs from 'fs'
 import handlebars from 'handlebars'
 import path from 'path'
+import { isAddress } from 'viem/utils'
 import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
+
+interface PoolConfig {
+  address: string
+  startBlock: number
+  feeSplit?: string
+  farmFeeSplit?: string
+  permitRouter?: string
+  farmingHelper?: string
+}
+
+interface CoveConfig {
+  address: string
+  startBlock: number
+}
 
 interface Deployment {
   networkName: string
-  startBlock: number
-  coveStartBlock: number
   prune: number | 'never' | 'auto'
 
-  // Core
-  clipperDirectExchange: string
-  clipperCove: string
-  feeSplit: string
-  farmFeeSplit: string
-  permitRouter: string
-  farmingHelper: string
+  pools: PoolConfig[]
+  coves: CoveConfig[]
 
   // Currencies
   ethOracleAddress: string
@@ -66,11 +75,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
     linkOracleAddress: '0x0000000000000000000000000000000000000000',
     opOracleAddress: '0x0000000000000000000000000000000000000000',
     glmrOracleAddress: '0x0000000000000000000000000000000000000000',
-    feeSplit: '0x0000000000000000000000000000000000000000',
-    farmFeeSplit: '0x0000000000000000000000000000000000000000',
-    permitRouter: '0x0000000000000000000000000000000000000000',
     arbOracleAddress: '0x0000000000000000000000000000000000000000',
-    farmingHelper: '0x0000000000000000000000000000000000000000',
     prune: 'auto' as const,
     // as of 19/03/2022 at 00:20 AM ET.
     fallbackPrices: {
@@ -86,17 +91,33 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       LINK: 14.91,
       GYEN: 0.008391,
     },
+    pools: [] as PoolConfig[],
+    coves: [] as CoveConfig[],
   }
 
   if (source === 'matic') {
     return {
+      ...commonConfig,
       networkName: 'matic',
-      startBlock: 27340300,
-      coveStartBlock: 28486635,
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2.15), // 1.5 months of blocks with 2.15s block time
 
-      // Core
-      clipperDirectExchange: '0x6Bfce69d1Df30FD2B2C8e478EDEC9dAa643Ae3B8',
-      clipperCove: '0x2370cB1278c948b606f789D2E5Ce0B41E90a756f',
+      pools: [
+        {
+          address: '0x6Bfce69d1Df30FD2B2C8e478EDEC9dAa643Ae3B8',
+          startBlock: 27340300,
+          permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
+        },
+        {
+          address: '0xd01e3549160c62acabc4d0eb89f67aafa3de8eed',
+          startBlock: 21032348,
+        },
+      ],
+      coves: [
+        {
+          address: '0x2370cB1278c948b606f789D2E5Ce0B41E90a756f',
+          startBlock: 28486635,
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'MATIC',
@@ -104,11 +125,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         name: 'Matic',
         address: '0x0000000000000000000000000000000000000000',
       },
-      ...commonConfig,
-      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2.15), // 1.5 months of blocks with 2.15s block time
-      permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
 
-      // Currencies
       ethOracleAddress: '0xF9680D99D6C9589e2a93a78A04A279e509205945',
       btcOracleAddress: '0xDE31F8bFBD8c84b5360CFACCa3539B938dd78ae6',
       daiOracleAddress: '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D',
@@ -119,40 +136,29 @@ async function fetchDeployment(source: string): Promise<Deployment> {
     }
   }
 
-  if (source === 'moonbase') {
-    return {
-      networkName: 'mbase',
-      startBlock: 1518878,
-      coveStartBlock: 1518878,
-
-      // Core
-      clipperDirectExchange: '0xc2dc657a3eef28f48bad9c3db27e33c4a76efd4c',
-      clipperCove: '0x0000000000000000000000000000000000000000',
-
-      addressZeroMap: {
-        symbol: 'DEV',
-        decimals: 18,
-        name: 'DEV',
-        address: '0x0000000000000000000000000000000000000000',
-      },
-
-      ...commonConfig,
-      // Currencies
-      ethOracleAddress: '0x3669da30c33D27A6A579548fCfc345fE5dEdda6e',
-      btcOracleAddress: '0xCf88A8d7fc1A687895fC8ffAad567f303926B094',
-      dotOracleAddress: '0xA873F6b30aD79fCAF9b03A0A883d6D1f18D661d7',
-    }
-  }
-
   if (source === 'optimism') {
     return {
+      ...commonConfig,
       networkName: 'optimism',
-      startBlock: 12746008,
-      coveStartBlock: 12747614,
 
-      // Core
-      clipperDirectExchange: '0x5130f6cE257B8F9bF7fac0A0b519Bd588120ed40',
-      clipperCove: '0x93baB043d534FbFDD13B405241be9267D393b827',
+      pools: [
+        {
+          address: '0x5130f6cE257B8F9bF7fac0A0b519Bd588120ed40',
+          startBlock: 12746008,
+          farmingHelper: '0x55f7c152b0C3cc1cD7479e4858Ac07f50D7fcFAD',
+          permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
+        },
+        {
+          address: '0xdbd4ffc32b34f630dd8ac18d37162ec8462db7db',
+          startBlock: 3183055,
+        },
+      ],
+      coves: [
+        {
+          address: '0x93baB043d534FbFDD13B405241be9267D393b827',
+          startBlock: 12747614,
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'ETH',
@@ -161,12 +167,8 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
 
-      ...commonConfig,
-      farmingHelper: '0x55f7c152b0C3cc1cD7479e4858Ac07f50D7fcFAD',
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
-      permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
 
-      // Currencies
       ethOracleAddress: '0x13e3Ee699D1909E989722E753853AE30b17e08c5',
       btcOracleAddress: '0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593',
       daiOracleAddress: '0x8dBa75e83DA73cc766A7e5a0ee71F656BAb470d6',
@@ -179,13 +181,21 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
   if (source === 'moonbeam') {
     return {
+      ...commonConfig,
       networkName: 'moonbeam',
-      startBlock: 855590,
-      coveStartBlock: 1054979,
 
-      // Core
-      clipperDirectExchange: '0xCE37051a3e60587157DC4c0391B4C555c6E68255',
-      clipperCove: '0x3309a431de850Ec554E5F22b2d9fC0B245a2023e',
+      pools: [
+        {
+          address: '0xCE37051a3e60587157DC4c0391B4C555c6E68255',
+          startBlock: 855590,
+        },
+      ],
+      coves: [
+        {
+          address: '0x3309a431de850Ec554E5F22b2d9fC0B245a2023e',
+          startBlock: 1054979,
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'GLMR',
@@ -194,8 +204,6 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000802',
       },
 
-      ...commonConfig,
-      // Currencies
       ethOracleAddress: '0x9ce2388a1696e22F870341C3FC1E89710C7569B5',
       btcOracleAddress: '0x8c4425e141979c66423A83bE2ee59135864487Eb',
       usdcOracleAddress: '0xA122591F60115D63421f66F752EF9f6e0bc73abC',
@@ -206,13 +214,32 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
   if (source === 'ethereum') {
     return {
+      ...commonConfig,
       networkName: 'mainnet',
-      startBlock: 15277939,
-      coveStartBlock: 15819271,
 
-      // Core
-      clipperDirectExchange: '0x655eDCE464CC797526600a462A8154650EEe4B77',
-      clipperCove: '0x44d097113DBEad613fde74b387081FB3b547C54f',
+      pools: [
+        {
+          address: '0x655eDCE464CC797526600a462A8154650EEe4B77',
+          startBlock: 16908406,
+          feeSplit: '0x84f4625C3E92b368E403cB002A9bF9bc7a9ae1b9',
+          farmFeeSplit: '0xD0454428ecd868A9AC615125FCbDB5Da9027436e',
+        },
+        {
+          address: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c',
+          startBlock: 15277939,
+          feeSplit: '0x51b0efa27ff4f29f8315496f01952377d581ce73',
+        },
+        {
+          address: '0xcc12532e95c2a6a4c53af153b9b739a3cc9218a7',
+          startBlock: 14461923,
+        },
+      ],
+      coves: [
+        {
+          address: '0x44d097113DBEad613fde74b387081FB3b547C54f',
+          startBlock: 15819271,
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'ETH',
@@ -221,11 +248,8 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
 
-      ...commonConfig,
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 12), // 1.5 months of blocks with 12s block time
-      feeSplit: '0x84f4625C3E92b368E403cB002A9bF9bc7a9ae1b9',
-      farmFeeSplit: '0xD0454428ecd868A9AC615125FCbDB5Da9027436e',
-      // currency oracles
+
       ethOracleAddress: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
       btcOracleAddress: '0xf4030086522a5beea4988f8ca5b36dbc97bee88c',
       daiOracleAddress: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
@@ -236,13 +260,30 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
   if (source === 'arbitrum') {
     return {
+      ...commonConfig,
       networkName: 'arbitrum-one',
-      startBlock: 117111604,
-      coveStartBlock: 117186034,
 
-      // Core
-      clipperDirectExchange: '0x769728b5298445BA2828c0f3F5384227fbF590C5',
-      clipperCove: '0xB873921b1ADd94ea47Bf983B060CE812e97873df',
+      pools: [
+        {
+          address: '0x769728b5298445BA2828c0f3F5384227fbF590C5',
+          startBlock: 117111604,
+          permitRouter: '0x93a5943e3091e94aA16f0813BB6901C3E9D4eB98',
+        },
+        {
+          address: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c',
+          startBlock: 30861559,
+        },
+      ],
+      coves: [
+        {
+          address: '0xB873921b1ADd94ea47Bf983B060CE812e97873df',
+          startBlock: 117186034,
+        },
+        {
+          address: '0x9e233dd6a90678baacd89c05ce5c48f43fcc106e',
+          startBlock: 31065917,
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'ETH',
@@ -251,11 +292,8 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
 
-      ...commonConfig,
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 0.25), // 1.5 months of blocks with 0.25s block time
-      permitRouter: '0x93a5943e3091e94aA16f0813BB6901C3E9D4eB98',
 
-      // currency oracles
       ethOracleAddress: '0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612',
       btcOracleAddress: '0x6ce185860a4963106506C203335A2910413708e9',
       daiOracleAddress: '0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB',
@@ -267,13 +305,16 @@ async function fetchDeployment(source: string): Promise<Deployment> {
 
   if (source === 'base') {
     return {
+      ...commonConfig,
       networkName: 'base',
-      startBlock: 11871349,
-      coveStartBlock: 11871349,
 
-      // Core
-      clipperDirectExchange: '0xb32D856cAd3D2EF07C94867A800035E37241247C',
-      clipperCove: '0x0000000000000000000000000000000000000000',
+      pools: [
+        {
+          address: '0xb32D856cAd3D2EF07C94867A800035E37241247C',
+          startBlock: 11871349,
+          permitRouter: '0x41c5362ADf3a2Cf6815454F7633172e7F6C1f834',
+        },
+      ],
 
       addressZeroMap: {
         symbol: 'ETH',
@@ -282,11 +323,8 @@ async function fetchDeployment(source: string): Promise<Deployment> {
         address: '0x0000000000000000000000000000000000000000',
       },
 
-      ...commonConfig,
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
-      permitRouter: '0x41c5362ADf3a2Cf6815454F7633172e7F6C1f834',
 
-      // currency oracles
       ethOracleAddress: '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70',
       btcOracleAddress: '0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e',
       daiOracleAddress: '0x591e79239a7d679378ec8c847e5038150364c78f',
@@ -297,7 +335,7 @@ async function fetchDeployment(source: string): Promise<Deployment> {
   throw new Error('Unsupported deployment')
 }
 
-yargs
+yargs(hideBin(process.argv))
   .command(
     'template',
     'Generate files from templates using the deployment addresses.',
@@ -329,6 +367,17 @@ yargs
         const templateFile = path.join(__dirname, '../templates/addresses.ts')
         const outputFile = path.join(__dirname, '../src/addresses.ts')
         const templateContent = fs.readFileSync(templateFile, 'utf8')
+
+        // @ts-ignore
+        handlebars.registerHelper('ifAddress', function(possibleAddress: string, options: any) {
+          if (isAddress(possibleAddress)) {
+            // @ts-ignore
+            return options.fn(this)
+          } else {
+            // @ts-ignore
+            return options.inverse(this)
+          }
+        })
 
         const compile = handlebars.compile(templateContent)
         const replaced = compile(deploymentJson)

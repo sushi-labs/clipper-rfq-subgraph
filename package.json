@@ -5,7 +5,6 @@
     "script": "ts-node scripts",
     "build": "graph build",
     "pre:codegen:polygon": "rimraf types && yarn script template --deployment matic",
-    "pre:codegen:moonbase": "rimraf types && yarn script template --deployment moonbase",
     "pre:codegen:optimism": "rimraf types && yarn script template --deployment optimism",
     "pre:codegen:moonbeam": "rimraf types && yarn script template --deployment moonbeam",
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
@@ -13,7 +12,6 @@
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy clipper-polygon",
-    "deploy:moonbase": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbase-alpha --debug",
     "deploy:optimism": "graph deploy clipper-optimism",
     "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
     "deploy:ethereum": "graph deploy clipper-mainnet",
@@ -22,7 +20,8 @@
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.97.0",
-    "@graphprotocol/graph-ts": "0.35.1"
+    "@graphprotocol/graph-ts": "0.35.1",
+    "viem": "^2.28.3"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",

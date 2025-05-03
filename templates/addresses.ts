@@ -1,18 +1,31 @@
-import { Address, TypedMap } from '@graphprotocol/graph-ts'
+import { Address, TypedMap } from '@graphprotocol/graph-ts';
 
-export let clipperDirectExchangeAddress = Address.fromString('{{clipperDirectExchange}}')
-export let clipperFeeSplitAddress = Address.fromString('{{feeSplit}}')
-export let clipperFarmFeeSplitAddress = Address.fromString('{{farmFeeSplit}}')
-export let clipperPermitRouterAddress = Address.fromString('{{permitRouter}}')
-export let clipperFarmingHelperAddress = Address.fromString('{{farmingHelper}}')
-export let ClipperFeeSplitAddressesByDirectExchange = new TypedMap<string, Array<string>>()
-ClipperFeeSplitAddressesByDirectExchange.set(clipperDirectExchangeAddress.toHexString(), [
-  clipperFeeSplitAddress.toHexString(),
-  clipperFarmFeeSplitAddress.toHexString(),
-])
-ClipperFeeSplitAddressesByDirectExchange.set('0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c'.toLowerCase(), [
-  '0x51b0efa27ff4f29f8315496f01952377d581ce73'.toLowerCase(),
-])
+export let PermitRoutersByPool = new TypedMap<string, Address>();
+{{#each pools}}
+{{#ifAddress permitRouter}}
+PermitRoutersByPool.set('{{address}}'.toLowerCase(), Address.fromString('{{permitRouter}}'));
+{{/ifAddress}}
+{{/each}}
+
+export let FarmingHelpersByPool = new TypedMap<string, Address>();
+{{#each pools}}
+{{#ifAddress farmingHelper}}
+FarmingHelpersByPool.set('{{address}}'.toLowerCase(), Address.fromString('{{farmingHelper}}'));
+{{/ifAddress}}
+{{/each}}
+
+export let ClipperFeeSplitAddressesByDirectExchange = new TypedMap<string, Array<string>>();
+{{#each pools}}
+let feeSplitsForPool{{@index}} = new Array<string>();
+{{#ifAddress feeSplit}}
+feeSplitsForPool{{@index}}.push('{{feeSplit}}'.toLowerCase());
+{{/ifAddress}}
+{{#ifAddress farmFeeSplit}}
+feeSplitsForPool{{@index}}.push('{{farmFeeSplit}}'.toLowerCase());
+{{/ifAddress}}
+ClipperFeeSplitAddressesByDirectExchange.set('{{address}}'.toLowerCase(), feeSplitsForPool{{@index}});
+{{/each}}
+
 
 
 export let PriceOracleAddresses = new TypedMap<string, string>()
@@ -51,7 +64,7 @@ export let AddressZeroAddress = '{{addressZeroMap.address}}'
 export let AddressZeroDecimals = '{{addressZeroMap.decimals}}'
 export let AddressZeroName = '{{addressZeroMap.name}}'
 
-export let ShorttailAssets = new TypedMap<Address, string>()
+export let ShorttailAssets = new TypedMap<Address, string>();
 // native address across all chains
 ShorttailAssets.set(Address.fromString('0x0000000000000000000000000000000000000000'), 'NATIVE')
 
@@ -94,5 +107,7 @@ ShorttailAssets.set(Address.fromString('0x42000000000000000000000000000000000000
 ShorttailAssets.set(Address.fromString('0x1ceA84203673764244E05693e42E6Ace62bE9BA5'), 'WBTC')
 ShorttailAssets.set(Address.fromString('0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb'), 'DAI')
 
-// ClipperLP
-ShorttailAssets.set(Address.fromString('{{clipperDirectExchange}}'), 'CLPRDRPL')
+// Add ClipperLP tokens for each pool
+{{#each pools}}
+ShorttailAssets.set(Address.fromString('{{address}}'), 'CLPRLP');
+{{/each}}

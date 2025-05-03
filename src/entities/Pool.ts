@@ -165,8 +165,6 @@ export function updatePoolStatus(
         fetchBigIntTokenBalance(pool.id, Address.fromString(feeSplitAddresses[i])),
       )
     }
-  } else {
-    poolTokenOwnedByFeeSplit = fetchBigIntTokenBalance(pool.id, clipperFeeSplitAddress)
   }
 
   // the fraction owned by fee split contract

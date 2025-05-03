@@ -7,7 +7,7 @@
 - Moonbase
 ## Build the subgraph
 In order to build the subgraph for chain N to be deploy-ready you mus first run:
-- `yarn pre:codegen:<N>` where N can be: `polygon`, `optimism`, `ethereum`, `moonbeam` and `moonbase`. And then
+- `yarn pre:codegen:<N>` where N can be: `polygon`, `optimism`, `ethereum`, `moonbeam`. And then
 - `yarn codegen`
 
 ## Deploying subgraph
