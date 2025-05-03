@@ -1,6 +1,6 @@
 import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
-import { ERC20 } from '../../types/ClipperDirectExchange/ERC20'
+import { ERC20 } from '../../types/templates/ClipperDirectExchange/ERC20'
 import { Token } from '../../types/schema'
 import { AddressZeroName, AddressZeroSymbol } from '../addresses'
 import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
@@ -33,7 +33,7 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
     decimalValue = decimalResult.value
   }
 
-  return BigInt.fromI32(decimalValue as i32)
+  return BigInt.fromI32(decimalValue)
 }
 
 export function fetchTokenName(tokenAddress: Address): string {

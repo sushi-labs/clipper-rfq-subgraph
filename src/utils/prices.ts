@@ -1,6 +1,6 @@
-import { Address, BigDecimal, BigInt, TypedMap } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, ethereum, TypedMap } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
-import { AggregatorV3Interface } from '../../types/ClipperDirectExchange/AggregatorV3Interface'
+import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
 import { FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
 import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN } from '../constants'
 import { getCoveBalances } from './cove'
@@ -30,13 +30,13 @@ export function getUsdPrice(tokenSymbol: string): BigDecimal {
   return usdValue
 }
 
-export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAddress: Address, decimals: number): TypedMap<string, BigDecimal> {
+export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAddress: Address, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
   let balances = getCoveBalances(coveAddress, tokenAddress, decimals)
   let poolTokens = balances[0]
   let longtailAssetBalance = balances[1]
 
   // gets the USD liquidity in our current pool
-  let currentPoolLiquidity = getCurrentPoolLiquidity(poolId)
+  let currentPoolLiquidity = getCurrentPoolLiquidity(poolId, block)
   let poolTokenSupply = getPoolTokenSupply(poolId)
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
 

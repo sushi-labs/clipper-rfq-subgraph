@@ -1,6 +1,6 @@
 import { Address, BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
 import { DailyPoolStatus, HourlyPoolStatus, Pool } from '../../types/schema'
-import { ClipperFeeSplitAddressesByDirectExchange, clipperFeeSplitAddress } from '../addresses'
+import { ClipperFeeSplitAddressesByDirectExchange } from '../addresses'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, ONE_DAY, ONE_HOUR } from '../constants'
 import { getCurrentPoolLiquidity, getPoolTokenSupply } from '../utils/pool'
 import { getOpenTime } from '../utils/timeHelpers'
@@ -42,8 +42,8 @@ export function loadPool(address: Address): Pool {
 }
 
 // TODO: refactor creating and updating to same function across different intervals (day, hour, etc ...)
-export function getDailyPoolStatus(pool: Pool, timestamp: BigInt): DailyPoolStatus {
-  let openTime = getOpenTime(timestamp, ONE_DAY)
+export function getDailyPoolStatus(pool: Pool, block: ethereum.Block): DailyPoolStatus {
+  let openTime = getOpenTime(block.timestamp, ONE_DAY)
   let from = openTime
   let to = openTime.plus(ONE_DAY).minus(BIG_INT_ONE)
 
@@ -81,7 +81,7 @@ export function getDailyPoolStatus(pool: Pool, timestamp: BigInt): DailyPoolStat
     dailyPoolStatus.from = from
     dailyPoolStatus.to = to
     dailyPoolStatus.poolTokensSupply = BIG_INT_ZERO
-    dailyPoolStatus.poolValue = getCurrentPoolLiquidity(pool.id)
+    dailyPoolStatus.poolValue = getCurrentPoolLiquidity(pool.id, block)
 
     dailyPoolStatus.save()
   }
@@ -89,8 +89,8 @@ export function getDailyPoolStatus(pool: Pool, timestamp: BigInt): DailyPoolStat
   return dailyPoolStatus
 }
 
-export function getHourlyPoolStatus(pool: Pool, timestamp: BigInt): HourlyPoolStatus {
-  let openTime = getOpenTime(timestamp, ONE_HOUR)
+export function getHourlyPoolStatus(pool: Pool, block: ethereum.Block): HourlyPoolStatus {
+  let openTime = getOpenTime(block.timestamp, ONE_HOUR)
   let from = openTime
   let to = openTime.plus(ONE_HOUR).minus(BIG_INT_ONE)
 
@@ -127,7 +127,7 @@ export function getHourlyPoolStatus(pool: Pool, timestamp: BigInt): HourlyPoolSt
     hourlyPoolStatus.pool = pool.id
     hourlyPoolStatus.from = from
     hourlyPoolStatus.to = to
-    hourlyPoolStatus.poolValue = getCurrentPoolLiquidity(pool.id)
+    hourlyPoolStatus.poolValue = getCurrentPoolLiquidity(pool.id, block)
 
     hourlyPoolStatus.save()
   }
@@ -176,8 +176,8 @@ export function updatePoolStatus(
 
   pool.revenueUSD = pool.revenueUSD.plus(revenueUSD)
 
-  updateDailyPoolStatus(pool, event.block.timestamp, addedTxVolume, addedTxFee, poolTokensSupply, revenueUSD)
-  updateHourlyPoolStatus(pool, event.block.timestamp, addedTxVolume, addedTxFee, poolTokensSupply, revenueUSD)
+  updateDailyPoolStatus(pool, addedTxVolume, addedTxFee, poolTokensSupply, revenueUSD, event.block)
+  updateHourlyPoolStatus(pool, addedTxVolume, addedTxFee, poolTokensSupply, revenueUSD, event.block)
 
   pool.save()
 
@@ -186,13 +186,13 @@ export function updatePoolStatus(
 
 function updateDailyPoolStatus(
   pool: Pool,
-  timestamp: BigInt,
   addedTxVolume: BigDecimal,
   addedTxFee: BigDecimal,
   poolTokensSupply: BigInt,
   revenueUSD: BigDecimal,
+  block: ethereum.Block,
 ): DailyPoolStatus {
-  let dailyPoolStatus = getDailyPoolStatus(pool, timestamp)
+  let dailyPoolStatus = getDailyPoolStatus(pool, block)
 
   dailyPoolStatus.txCount = dailyPoolStatus.txCount.plus(BIG_INT_ONE)
   dailyPoolStatus.volumeUSD = dailyPoolStatus.volumeUSD.plus(addedTxVolume)
@@ -213,13 +213,13 @@ function updateDailyPoolStatus(
 
 function updateHourlyPoolStatus(
   pool: Pool,
-  timestamp: BigInt,
   addedTxVolume: BigDecimal,
   addedTxFee: BigDecimal,
   poolTokensSupply: BigInt,
   revenueUSD: BigDecimal,
+  block: ethereum.Block,
 ): HourlyPoolStatus {
-  let hourlyPoolStatus = getHourlyPoolStatus(pool, timestamp)
+  let hourlyPoolStatus = getHourlyPoolStatus(pool, block)
 
   hourlyPoolStatus.txCount = hourlyPoolStatus.txCount.plus(BIG_INT_ONE)
   hourlyPoolStatus.volumeUSD = hourlyPoolStatus.volumeUSD.plus(addedTxVolume)

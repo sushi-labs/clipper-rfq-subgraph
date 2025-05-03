@@ -1,9 +1,9 @@
 import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import { convertTokenToDecimal } from ".";
-import { ClipperCove } from "../../types/ClipperCove/ClipperCove";
+import { ClipperCove } from "../../types/templates/ClipperCove/ClipperCove";
 import { BIG_INT_EIGHTEEN } from "../constants";
 
-export function getCoveBalances(coveAddress: Address, tokenAddress: Address, decimals: number): Array<BigDecimal> {
+export function getCoveBalances(coveAddress: Address, tokenAddress: Address, decimals: i32): Array<BigDecimal> {
   let coveContract = ClipperCove.bind(coveAddress)
   let lastBalances = coveContract.lastBalances(tokenAddress)
   
@@ -12,7 +12,7 @@ export function getCoveBalances(coveAddress: Address, tokenAddress: Address, dec
   let tokenBalance = lastBalances.bitAnd(mask)
 
   let poolTokens = convertTokenToDecimal(lpTokens, BIG_INT_EIGHTEEN)
-  let assetBalance = convertTokenToDecimal(tokenBalance, BigInt.fromI32(decimals as i32))
+  let assetBalance = convertTokenToDecimal(tokenBalance, BigInt.fromI32(decimals))
   
   return [poolTokens, assetBalance]
 }

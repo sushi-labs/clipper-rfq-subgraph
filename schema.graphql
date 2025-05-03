@@ -1,8 +1,3 @@
-enum TokenType {
-  SHORTTAIL
-  LONGTAIL
-}
-
 enum SwapType {
   COVE
   POOL
@@ -60,6 +55,9 @@ type Pool @entity(immutable: false) {
 
   # derived pool coves
   coves: [Cove!]! @derivedFrom(field: "pool")
+
+  # derived pool tokens
+  tokens: [PoolToken!]! @derivedFrom(field: "pool")
 }
 
 type DailyPoolStatus @entity(immutable: false) {
@@ -153,18 +151,21 @@ type Token @entity(immutable: false) {
   volume: BigDecimal!
   # volume in derived USD
   volumeUSD: BigDecimal!
-  # total value locked in pool (supports additional pools)
-  tvl: BigDecimal!
-  # total value locked from derived usd
-  tvlUSD: BigDecimal!
   # total amount deposited in pool
   deposited: BigDecimal!
   # total amount in USD deposited in pool
   depositedUSD: BigDecimal!
-  # type of token (longtail or shorttail)
-  type: TokenType
-  # if type is longtail, cove should be set
-  cove: Cove
+}
+
+type PoolToken @entity(immutable: false) {
+  id: ID!
+  pool: Pool!
+  token: Token!
+  createdAt: BigInt!
+  # total value locked in pool (supports additional pools)
+  tvl: BigDecimal!
+  # total value locked from derived usd
+  tvlUSD: BigDecimal!
 }
 
 type Swap @entity(immutable: true) {
@@ -330,6 +331,7 @@ type CoveWithdrawal @entity(immutable: true) {
 type AllCoveStatus @entity(immutable: false) {
   "Id of smart contract"
   id: ID!
+  pool: Pool!
   volumeUSD: BigDecimal!
   txCount: Int!
   depositCount: Int!

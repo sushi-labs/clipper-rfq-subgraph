@@ -95,3 +95,86 @@ dataSources:
           handler: handleCoveWithdrawn
       file: ./src/coveMapping.ts
 {{/each}}
+
+templates:
+  - name: ClipperDirectExchange
+    kind: ethereum/contract
+    network: {{networkName}}
+    source:
+      abi: ClipperDirectExchange
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Pool
+        - DailyPoolStatus
+        - HourlyPoolStatus
+        - PoolPair
+        - PoolTransactionSource
+        - Deposit
+        - Withdrawal
+        - Token
+        - Swap
+        - Pair
+        - PoolPair
+        - TransactionSource
+        - User
+      abis:
+        - name: ClipperDirectExchange
+          file: ./abis/ClipperDirectExchange.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: AggregatorV3Interface
+          file: ./abis/AggregatorV3Interface.json
+      eventHandlers:
+        - event: Deposited(indexed address,uint256,uint256)
+          handler: handleDeposited
+        - event: Withdrawn(indexed address,uint256,uint256)
+          handler: handleWithdrawn
+        - event: AssetWithdrawn(indexed address,uint256,indexed address,uint256)
+          handler: handleSingleAssetWithdrawn
+        - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
+          handler: handleSwapped
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts
+  - name: ClipperCove
+    kind: ethereum/contract
+    network: {{networkName}}
+    source:
+      abi: ClipperCove
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Swap
+        - Token
+        - CoveTransactionSource
+        - TransactionSource
+        - CoveDeposit
+        - CoveWithdrawal
+        - Cove
+        - HistoricCoveStatus
+        - UserCoveStake
+        - AllCovesHistoricStatus
+        - AllCoveStatus
+        - User
+      abis:
+        - name: ClipperCove
+          file: ./abis/ClipperCove.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: AggregatorV3Interface
+          file: ./abis/AggregatorV3Interface.json
+        - name: ClipperDirectExchange
+          file: ./abis/ClipperDirectExchange.json
+      eventHandlers:
+        - event: CoveSwapped(indexed address,indexed address,indexed address,uint256,uint256,bytes32)
+          handler: handleCoveSwapped
+        - event: CoveDeposited(indexed address,indexed address,uint256,uint256)
+          handler: handleCoveDeposited
+        - event: CoveWithdrawn(indexed address,indexed address,uint256,uint256)
+          handler: handleCoveWithdrawn
+      file: ./src/coveMapping.ts

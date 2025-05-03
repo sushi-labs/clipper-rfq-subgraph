@@ -5,23 +5,23 @@ import {
   Swapped,
   Transfer,
   Withdrawn,
-} from '../types/ClipperDirectExchange/ClipperDirectExchange'
+} from '../types/templates/ClipperDirectExchange/ClipperDirectExchange'
 import { Deposit, Swap, Withdrawal } from '../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
 import { getDailyPoolStatus, getHourlyPoolStatus, loadPool, updatePoolStatus } from './entities/Pool'
 import { upsertUser } from './entities/User'
-import { convertTokenToDecimal, loadPoolTransactionSource, loadToken, loadTransactionSource } from './utils'
+import { convertTokenToDecimal, loadPoolToken, loadPoolTransactionSource, loadToken, loadTransactionSource } from './utils'
 import { getCurrentPoolLiquidity, getPoolTokenSupply } from './utils/pool'
 import { getUsdPrice } from './utils/prices'
 import { fetchTokenBalance } from './utils/token'
-import { clipperFarmingHelperAddress, clipperPermitRouterAddress } from './addresses'
+import { FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
 
 export function handleDeposited(event: Deposited): void {
   let pool = loadPool(event.address)
   let timestamp = event.block.timestamp
   let txHash = event.transaction.hash.toHexString()
-  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id)
+  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id, event.block)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
   let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
@@ -34,8 +34,10 @@ export function handleDeposited(event: Deposited): void {
   newDeposit.pool = event.address.toHexString()
   newDeposit.poolTokens = receivedPoolTokens
   newDeposit.amountUsd = usdProportion
-  if (event.params.depositor.equals(clipperFarmingHelperAddress)) {
-    newDeposit.depositor = event.transaction.from
+
+  let farmingHelper = FarmingHelpersByPool.get(event.address.toHexString().toLowerCase())
+  if (farmingHelper) {
+    newDeposit.depositor = farmingHelper
   } else {
     newDeposit.depositor = event.params.depositor
   }
@@ -46,13 +48,13 @@ export function handleDeposited(event: Deposited): void {
   pool.avgDeposit = pool.depositedUSD.div(pool.depositCount.toBigDecimal())
 
   // UPDATE DAILY DEPOSIT VALUE
-  let dailyPoolStatus = getDailyPoolStatus(pool, timestamp)
+  let dailyPoolStatus = getDailyPoolStatus(pool, event.block)
   dailyPoolStatus.depositCount = dailyPoolStatus.depositCount.plus(BIG_INT_ONE)
   dailyPoolStatus.depositedUSD = dailyPoolStatus.depositedUSD.plus(usdProportion)
   dailyPoolStatus.avgDeposit = dailyPoolStatus.depositedUSD.div(dailyPoolStatus.depositCount.toBigDecimal())
 
   // UPDATE HOURLY DEPOSIT VALUE
-  let hourlyPoolStatus = getHourlyPoolStatus(pool, timestamp)
+  let hourlyPoolStatus = getHourlyPoolStatus(pool, event.block)
   hourlyPoolStatus.depositCount = hourlyPoolStatus.depositCount.plus(BIG_INT_ONE)
   hourlyPoolStatus.depositedUSD = hourlyPoolStatus.depositedUSD.plus(usdProportion)
   hourlyPoolStatus.avgDeposit = hourlyPoolStatus.depositedUSD.div(hourlyPoolStatus.depositCount.toBigDecimal())
@@ -65,7 +67,7 @@ export function handleDeposited(event: Deposited): void {
 
 function handleWithdrawnEvents(event: ethereum.Event, poolTokens: BigInt, withdrawer: Address): void {
   let pool = loadPool(event.address)
-  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id)
+  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id, event.block)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
 
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
@@ -87,13 +89,13 @@ function handleWithdrawnEvents(event: ethereum.Event, poolTokens: BigInt, withdr
   pool.avgDeposit = pool.withdrewUSD.div(pool.withdrawalCount.toBigDecimal())
 
   // UPDATE DAILY WITHDRAWAL VALUE
-  let dailyPoolStatus = getDailyPoolStatus(pool, event.block.timestamp)
+  let dailyPoolStatus = getDailyPoolStatus(pool, event.block)
   dailyPoolStatus.withdrawalCount = dailyPoolStatus.withdrawalCount.plus(BIG_INT_ONE)
   dailyPoolStatus.withdrewUSD = dailyPoolStatus.withdrewUSD.plus(usdProportion)
   dailyPoolStatus.avgWithdraw = dailyPoolStatus.withdrewUSD.div(dailyPoolStatus.withdrawalCount.toBigDecimal())
 
   // UPDATE HOURLY WITHDRAWAL VALUE
-  let hourlyPoolStatus = getHourlyPoolStatus(pool, event.block.timestamp)
+  let hourlyPoolStatus = getHourlyPoolStatus(pool, event.block)
   hourlyPoolStatus.withdrawalCount = hourlyPoolStatus.withdrawalCount.plus(BIG_INT_ONE)
   hourlyPoolStatus.withdrewUSD = hourlyPoolStatus.withdrewUSD.plus(usdProportion)
   hourlyPoolStatus.avgWithdraw = hourlyPoolStatus.withdrewUSD.div(hourlyPoolStatus.withdrawalCount.toBigDecimal())
@@ -116,6 +118,8 @@ export function handleSwapped(event: Swapped): void {
   let poolId = event.address.toHexString()
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
+  let poolInAsset = loadPoolToken(poolId, inAsset)
+  let poolOutAsset = loadPoolToken(poolId, outAsset)
   let poolAddress = event.address
 
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
@@ -167,23 +171,26 @@ export function handleSwapped(event: Swapped): void {
     inAsset.txCount = inAsset.txCount.plus(BIG_INT_ONE)
     inAsset.volume = inAsset.volume.plus(amountIn.plus(amountOut).div(BigDecimal.fromString('2')))
     inAsset.volumeUSD = inAsset.volumeUSD.plus(transactionVolume)
-    inAsset.tvl = inTokenBalance
-    inAsset.tvlUSD = inTokenBalanceUsd
+    poolInAsset.tvl = inTokenBalance
+    poolInAsset.tvlUSD = inTokenBalanceUsd
     inAsset.save()
+    poolInAsset.save()
   } else {
     outAsset.txCount = outAsset.txCount.plus(BIG_INT_ONE)
     outAsset.volume = outAsset.volume.plus(amountOut)
     outAsset.volumeUSD = outAsset.volumeUSD.plus(amountOutUsd)
-    outAsset.tvl = outTokenBalance
-    outAsset.tvlUSD = outTokenBalanceUsd
+    poolOutAsset.tvl = outTokenBalance
+    poolOutAsset.tvlUSD = outTokenBalanceUsd
     outAsset.save()
+    poolOutAsset.save()
 
     inAsset.txCount = inAsset.txCount.plus(BIG_INT_ONE)
     inAsset.volume = inAsset.volume.plus(amountIn)
     inAsset.volumeUSD = inAsset.volumeUSD.plus(amountInUsd)
-    inAsset.tvl = inTokenBalance
-    inAsset.tvlUSD = inTokenBalanceUsd
+    poolInAsset.tvl = inTokenBalance
+    poolInAsset.tvlUSD = inTokenBalanceUsd
     inAsset.save()
+    poolInAsset.save()
   }
 
   let txSource = loadTransactionSource(event.params.auxiliaryData)
@@ -211,7 +218,9 @@ export function handleSwapped(event: Swapped): void {
 }
 
 export function handleTransfer(event: Transfer): void {
-  if (event.params.from.equals(clipperPermitRouterAddress)) {
+  let permitRouter = PermitRoutersByPool.get(event.address.toHexString().toLowerCase())
+
+  if (permitRouter && event.params.from.equals(permitRouter)) {
     let deposit = Deposit.load(event.transaction.hash.toHexString())
     if (!deposit) {
       return

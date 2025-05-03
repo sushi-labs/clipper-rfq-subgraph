@@ -351,7 +351,7 @@ yargs(hideBin(process.argv))
       {
         console.log('Generating subgraph manifest')
 
-        const templateFile = path.join(__dirname, '../templates/subgraph.yml')
+        const templateFile = path.join(__dirname, '../templates/subgraph.yml.hbs')
         const outputFile = path.join(__dirname, '../subgraph.yaml')
         const templateContent = fs.readFileSync(templateFile, 'utf8')
 
@@ -364,7 +364,7 @@ yargs(hideBin(process.argv))
       {
         console.log('Generating static address map')
 
-        const templateFile = path.join(__dirname, '../templates/addresses.ts')
+        const templateFile = path.join(__dirname, '../templates/addresses.ts.hbs')
         const outputFile = path.join(__dirname, '../src/addresses.ts')
         const templateContent = fs.readFileSync(templateFile, 'utf8')
 

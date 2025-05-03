@@ -9,6 +9,3 @@ export let BIG_INT_ONE = BigInt.fromI32(1)
 export let BIG_INT_EIGHTEEN = BigInt.fromI32(18)
 export let ONE_HOUR = BigInt.fromI32(3600)
 export let ONE_DAY = BigInt.fromI32(86400)
-
-export let ShortTailType = 'SHORTTAIL'
-export let LongTailType = 'LONGTAIL'

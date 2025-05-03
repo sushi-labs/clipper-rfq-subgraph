@@ -76,7 +76,9 @@ export function loadAllCoveStatus(coveAddress: Address): AllCoveStatus {
 
   if (!allStatus) {
     allStatus = new AllCoveStatus(coveAddress.toHexString())
-
+    let poolAddress = getCovePoolAddress(coveAddress)
+    let pool = loadPool(poolAddress)
+    allStatus.pool = pool.id
     allStatus.txCount = 0
     allStatus.depositCount = 0
     allStatus.withdrawalCount = 0

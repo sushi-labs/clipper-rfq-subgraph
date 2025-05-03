@@ -1,6 +1,5 @@
 import { BigDecimal } from '@graphprotocol/graph-ts'
-import { Swapped } from '../../types/ClipperDirectExchange/ClipperDirectExchange'
-import { Pair, Pool, PoolPair } from '../../types/schema'
+import { Pair, PoolPair } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
 export function loadPair(inAsset: string, outAsset: string): Pair {

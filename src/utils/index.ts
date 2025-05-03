@@ -1,7 +1,6 @@
-import { Address, BigDecimal, BigInt, Bytes } from '@graphprotocol/graph-ts'
-import { CoveTransactionSource, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
-import { ShorttailAssets } from '../addresses'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, LongTailType, ShortTailType } from '../constants'
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from '@graphprotocol/graph-ts'
+import { CoveTransactionSource, PoolToken, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol } from './token'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
@@ -70,7 +69,6 @@ export function loadToken(tokenAddress: Address): Token {
   let token = Token.load(tokenAddress.toHex())
 
   if (!token) {
-    let isShorttail = ShorttailAssets.isSet(tokenAddress)
     token = new Token(tokenAddress.toHex())
     let symbol = fetchTokenSymbol(tokenAddress)
     token.symbol = symbol
@@ -79,19 +77,34 @@ export function loadToken(tokenAddress: Address): Token {
     token.txCount = BIG_INT_ZERO
     token.volume = BIG_DECIMAL_ZERO
     token.volumeUSD = BIG_DECIMAL_ZERO
-    token.tvl = BIG_DECIMAL_ZERO
-    token.tvlUSD = BIG_DECIMAL_ZERO
     token.deposited = BIG_DECIMAL_ZERO
     token.depositedUSD = BIG_DECIMAL_ZERO
-    if (isShorttail) {
-      token.type = ShortTailType
-    } else {
-      token.type = LongTailType
-      token.cove = tokenAddress.toHexString()
-    }
-
     token.save()
   }
 
   return token as Token
+}
+
+export function loadOrCreatePoolToken(poolId: string, token: Token, block: ethereum.Block): PoolToken {
+  let id = poolId.concat(token.id)
+  let poolToken = PoolToken.load(id)
+  if (!poolToken) {
+    poolToken = new PoolToken(id)
+    poolToken.pool = poolId
+    poolToken.token = token.id
+    poolToken.tvl = BIG_DECIMAL_ZERO
+    poolToken.tvlUSD = BIG_DECIMAL_ZERO
+    poolToken.createdAt = block.timestamp
+    poolToken.save()
+  }
+  return poolToken
+}
+
+export function loadPoolToken(poolId: string, token: Token): PoolToken {
+  let id = poolId.concat(token.id)
+  let poolToken = PoolToken.load(id)
+  if (!poolToken) {
+    throw new Error('Token is not part of the pool')
+  }
+  return poolToken
 }
