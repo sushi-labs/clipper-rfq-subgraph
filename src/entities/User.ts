@@ -8,13 +8,13 @@ export function upsertUser(userWallet: string, txTimestamp: BigInt, txVolume: Bi
 
   if (!user) {
     user = new User(userWallet)
-    user.firstTxTimestamp = txTimestamp
+    user.firstTxTimestamp = txTimestamp.toI32()
     user.volumeUSD = BIG_DECIMAL_ZERO
     user.txCount = BIG_INT_ZERO
     isNewUser = true
   }
 
-  user.lastTxTimestamp = txTimestamp
+  user.lastTxTimestamp = txTimestamp.toI32()
   user.volumeUSD = user.volumeUSD.plus(txVolume)
   user.txCount = user.txCount.plus(BIG_INT_ONE)
   user.save()

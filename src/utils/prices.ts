@@ -4,7 +4,8 @@ import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchan
 import { FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
 import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN } from '../constants'
 import { getCoveBalances } from './cove'
-import { getCurrentPoolLiquidity, getPoolTokenSupply } from './pool'
+import { getPoolTokensLiquidity, getPoolTokenSupply } from './pool'
+import { loadPool } from '../entities/Pool'
 
 export function getUsdPrice(tokenSymbol: string): BigDecimal {
   let priceOracleAddress = PriceOracleAddresses.get(tokenSymbol)
@@ -32,15 +33,17 @@ export function getUsdPrice(tokenSymbol: string): BigDecimal {
 
 export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAddress: Address, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
   let balances = getCoveBalances(coveAddress, tokenAddress, decimals)
-  let poolTokens = balances[0]
+  let poolTokensAmount = balances[0]
   let longtailAssetBalance = balances[1]
 
+  let poolAddress = Address.fromString(poolId)
+  let pool = loadPool(poolAddress, block)
   // gets the USD liquidity in our current pool
-  let currentPoolLiquidity = getCurrentPoolLiquidity(poolId, block)
+  let currentPoolLiquidity = getPoolTokensLiquidity(poolAddress, pool.tokens.load())
   let poolTokenSupply = getPoolTokenSupply(poolId)
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
 
-  let covePoolTokenProportion = poolTokens.div(totalPoolTokens)
+  let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)
 
   // usd amount of pool tokens owned by the cove.
   let usdProportion = currentPoolLiquidity.times(covePoolTokenProportion)
@@ -55,7 +58,7 @@ export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAdd
   returnValue.set('coveLiquidity', coveLiquidity)
   returnValue.set('assetPrice', assetPrice)
   returnValue.set('assetBalance', longtailAssetBalance)
-  returnValue.set('poolTokenBalance', poolTokens)
+  returnValue.set('poolTokenBalance', poolTokensAmount)
   returnValue.set('longtailAssetBalance', longtailAssetBalance)
   returnValue.set('totalPoolTokens', totalPoolTokens)
   returnValue.set('currentPoolLiquidity', currentPoolLiquidity)

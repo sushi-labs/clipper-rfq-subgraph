@@ -6,22 +6,29 @@ import {
   Transfer,
   Withdrawn,
 } from '../types/templates/ClipperDirectExchange/ClipperDirectExchange'
-import { Deposit, Swap, Withdrawal } from '../types/schema'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE } from './constants'
+import { Deposit, PoolEvent, Swap, Withdrawal } from '../types/schema'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
-import { getDailyPoolStatus, getHourlyPoolStatus, loadPool, updatePoolStatus } from './entities/Pool'
+import { loadPool } from './entities/Pool'
 import { upsertUser } from './entities/User'
-import { convertTokenToDecimal, loadPoolToken, loadPoolTransactionSource, loadToken, loadTransactionSource } from './utils'
-import { getCurrentPoolLiquidity, getPoolTokenSupply } from './utils/pool'
+import {
+  convertTokenToDecimal,
+  loadPoolToken,
+  loadPoolTransactionSource,
+  loadToken,
+  loadTransactionSource,
+} from './utils'
+import { getPoolTokensLiquidity, getPoolTokenSupply, loadOrCreatePoolTokens } from './utils/pool'
 import { getUsdPrice } from './utils/prices'
-import { fetchTokenBalance } from './utils/token'
-import { FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
+import { fetchBigIntTokenBalance, fetchTokenBalance } from './utils/token'
+import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
 
 export function handleDeposited(event: Deposited): void {
-  let pool = loadPool(event.address)
+  let pool = loadPool(event.address, event.block)
   let timestamp = event.block.timestamp
   let txHash = event.transaction.hash.toHexString()
-  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id, event.block)
+  let tokens = loadOrCreatePoolTokens(pool.id, event.block)
+  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
   let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
@@ -30,7 +37,7 @@ export function handleDeposited(event: Deposited): void {
   let usdProportion = currentPoolLiquidity.times(poolOwnedAmount)
 
   let newDeposit = new Deposit(txHash)
-  newDeposit.timestamp = timestamp
+  newDeposit.timestamp = timestamp.toI32()
   newDeposit.pool = event.address.toHexString()
   newDeposit.poolTokens = receivedPoolTokens
   newDeposit.amountUsd = usdProportion
@@ -47,95 +54,78 @@ export function handleDeposited(event: Deposited): void {
   pool.depositedUSD = pool.depositedUSD.plus(usdProportion)
   pool.avgDeposit = pool.depositedUSD.div(pool.depositCount.toBigDecimal())
 
-  // UPDATE DAILY DEPOSIT VALUE
-  let dailyPoolStatus = getDailyPoolStatus(pool, event.block)
-  dailyPoolStatus.depositCount = dailyPoolStatus.depositCount.plus(BIG_INT_ONE)
-  dailyPoolStatus.depositedUSD = dailyPoolStatus.depositedUSD.plus(usdProportion)
-  dailyPoolStatus.avgDeposit = dailyPoolStatus.depositedUSD.div(dailyPoolStatus.depositCount.toBigDecimal())
+  let poolEvent = new PoolEvent(0)
+  poolEvent.timestamp = timestamp.toI32();
+  poolEvent.pool = pool.id
+  poolEvent.type = DEPOSIT_EVENT
+  poolEvent.amountUSD = usdProportion
+  poolEvent.poolValue = currentPoolLiquidity
+  poolEvent.poolTokensSupply = poolTokenSupply
 
-  // UPDATE HOURLY DEPOSIT VALUE
-  let hourlyPoolStatus = getHourlyPoolStatus(pool, event.block)
-  hourlyPoolStatus.depositCount = hourlyPoolStatus.depositCount.plus(BIG_INT_ONE)
-  hourlyPoolStatus.depositedUSD = hourlyPoolStatus.depositedUSD.plus(usdProportion)
-  hourlyPoolStatus.avgDeposit = hourlyPoolStatus.depositedUSD.div(hourlyPoolStatus.depositCount.toBigDecimal())
-
+  poolEvent.save()
   newDeposit.save()
-  hourlyPoolStatus.save()
-  dailyPoolStatus.save()
   pool.save()
 }
 
-function handleWithdrawnEvents(event: ethereum.Event, poolTokens: BigInt, withdrawer: Address): void {
-  let pool = loadPool(event.address)
-  let currentPoolLiquidity = getCurrentPoolLiquidity(pool.id, event.block)
+function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Address): void {
+  let pool = loadPool(event.address, event.block)
+  let tokens = loadOrCreatePoolTokens(pool.id, event.block)
+  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
 
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
-  let burntPoolTokens = convertTokenToDecimal(poolTokens, BigInt.fromI32(18))
+  let burntPoolTokens = convertTokenToDecimal(poolTokensWithdrawn, BigInt.fromI32(18))
 
   let burntProportion = burntPoolTokens.div(totalPoolTokens.plus(burntPoolTokens))
   let usdProportion = currentPoolLiquidity.times(burntProportion)
 
   let newWithdrawal = new Withdrawal(event.transaction.hash.toHexString())
-  newWithdrawal.timestamp = event.block.timestamp
+  newWithdrawal.timestamp = event.block.timestamp.toI32()
   newWithdrawal.amountUsd = usdProportion
   newWithdrawal.poolTokens = burntPoolTokens
   newWithdrawal.pool = event.address.toHexString()
   newWithdrawal.withdrawer = withdrawer
+
+  let poolEvent = new PoolEvent(0)
+  poolEvent.timestamp = event.block.timestamp.toI32();
+  poolEvent.pool = pool.id
+  poolEvent.type = WITHDRAWAL_EVENT
+  poolEvent.amountUSD = usdProportion
+  poolEvent.poolValue = currentPoolLiquidity
+  poolEvent.poolTokensSupply = poolTokenSupply
 
   pool.poolTokensSupply = poolTokenSupply
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
   pool.withdrewUSD = pool.withdrewUSD.plus(usdProportion)
   pool.avgDeposit = pool.withdrewUSD.div(pool.withdrawalCount.toBigDecimal())
 
-  // UPDATE DAILY WITHDRAWAL VALUE
-  let dailyPoolStatus = getDailyPoolStatus(pool, event.block)
-  dailyPoolStatus.withdrawalCount = dailyPoolStatus.withdrawalCount.plus(BIG_INT_ONE)
-  dailyPoolStatus.withdrewUSD = dailyPoolStatus.withdrewUSD.plus(usdProportion)
-  dailyPoolStatus.avgWithdraw = dailyPoolStatus.withdrewUSD.div(dailyPoolStatus.withdrawalCount.toBigDecimal())
-
-  // UPDATE HOURLY WITHDRAWAL VALUE
-  let hourlyPoolStatus = getHourlyPoolStatus(pool, event.block)
-  hourlyPoolStatus.withdrawalCount = hourlyPoolStatus.withdrawalCount.plus(BIG_INT_ONE)
-  hourlyPoolStatus.withdrewUSD = hourlyPoolStatus.withdrewUSD.plus(usdProportion)
-  hourlyPoolStatus.avgWithdraw = hourlyPoolStatus.withdrewUSD.div(hourlyPoolStatus.withdrawalCount.toBigDecimal())
-
+  poolEvent.save()
   newWithdrawal.save()
-  dailyPoolStatus.save()
-  hourlyPoolStatus.save()
   pool.save()
 }
 
 export function handleWithdrawn(event: Withdrawn): void {
-  handleWithdrawnEvents(event, event.params.poolTokens, event.params.withdrawer)
+  handleWithdrawnEvent(event, event.params.poolTokens, event.params.withdrawer)
 }
 
 export function handleSingleAssetWithdrawn(event: AssetWithdrawn): void {
-  handleWithdrawnEvents(event, event.params.poolTokens, event.params.withdrawer)
+  handleWithdrawnEvent(event, event.params.poolTokens, event.params.withdrawer)
 }
 
 export function handleSwapped(event: Swapped): void {
-  let poolId = event.address.toHexString()
+  let poolAddress = event.address
+  let poolId = poolAddress.toHexString()
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
   let poolInAsset = loadPoolToken(poolId, inAsset)
   let poolOutAsset = loadPoolToken(poolId, outAsset)
-  let poolAddress = event.address
-
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
   let amountOut = convertTokenToDecimal(event.params.outAmount, outAsset.decimals)
-
   let inputPrice = getUsdPrice(inAsset.symbol)
   let outputPrice = getUsdPrice(outAsset.symbol)
   let amountInUsd = inputPrice.times(amountIn)
   let amountOutUsd = outputPrice.times(amountOut)
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
-
-  // token balances
-  let inTokenBalance = fetchTokenBalance(inAsset, poolAddress)
-  let outTokenBalance = fetchTokenBalance(outAsset, poolAddress)
-  let inTokenBalanceUsd = inputPrice.times(inTokenBalance)
-  let outTokenBalanceUsd = outputPrice.times(outTokenBalance)
 
   let swap = new Swap(
     event.transaction.hash
@@ -144,7 +134,7 @@ export function handleSwapped(event: Swapped): void {
       .concat(event.logIndex.toString()),
   )
   swap.transaction = event.transaction.hash
-  swap.timestamp = event.block.timestamp
+  swap.timestamp = event.block.timestamp.toI32()
   swap.inToken = inAsset.id
   swap.outToken = outAsset.id
   swap.origin = event.transaction.from
@@ -165,7 +155,10 @@ export function handleSwapped(event: Swapped): void {
   swap.feeUSD = feeUSD
 
   // update assets values
-
+  let inTokenBalance = fetchTokenBalance(inAsset, poolAddress)
+  let outTokenBalance = fetchTokenBalance(outAsset, poolAddress)
+  let inTokenBalanceUsd = inputPrice.times(inTokenBalance)
+  let outTokenBalanceUsd = outputPrice.times(outTokenBalance)
   // if both assets are the same, update just one with the subtraction of both amounts
   if (inAsset.id === outAsset.id) {
     inAsset.txCount = inAsset.txCount.plus(BIG_INT_ONE)
@@ -207,11 +200,58 @@ export function handleSwapped(event: Swapped): void {
     transactionVolume,
   )
   updatePoolPair(poolId, workingPair.id, transactionVolume)
-  let isUnique = upsertUser(event.transaction.from.toHexString(), event.block.timestamp, transactionVolume)
   swap.pair = workingPair.id
   swap.sender = event.transaction.from.toHexString()
-  updatePoolStatus(event, transactionVolume, isUnique, feeUSD)
+  
+  let isUniqueUser = upsertUser(event.transaction.from.toHexString(), event.block.timestamp, transactionVolume)
 
+  let poolTokensSupply = getPoolTokenSupply(poolId)
+  let feeSplitAddresses = ClipperFeeSplitAddressesByDirectExchange.get(poolId.toLowerCase())
+  let poolTokenOwnedByFeeSplit: BigInt = BIG_INT_ZERO
+  if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
+    for (let i = 0; i < feeSplitAddresses.length; i++) {
+      poolTokenOwnedByFeeSplit = poolTokenOwnedByFeeSplit.plus(
+        fetchBigIntTokenBalance(poolId, Address.fromString(feeSplitAddresses[i])),
+      )
+    }
+  }
+
+  // the fraction owned by fee split contract
+  let theFraction = poolTokenOwnedByFeeSplit.toBigDecimal().div(poolTokensSupply.toBigDecimal())
+  let daoRevenueFraction = event.block.timestamp.ge(BigInt.fromI32(1690848000))
+    ? BigDecimal.fromString('1')
+    : BigDecimal.fromString('0.5')
+  let revenueUSD = feeUSD.times(theFraction).times(daoRevenueFraction)
+
+  let pool = loadPool(event.address, event.block)
+  pool.txCount = pool.txCount.plus(BIG_INT_ONE)
+  pool.volumeUSD = pool.volumeUSD.plus(transactionVolume)
+  pool.avgTrade = pool.volumeUSD.div(pool.txCount.toBigDecimal())
+  pool.feeUSD = pool.feeUSD.plus(feeUSD)
+  pool.avgTradeFee = pool.feeUSD.div(pool.txCount.toBigDecimal())
+  pool.avgFeeInBps = pool.feeUSD
+    .div(pool.volumeUSD)
+    .times(BigDecimal.fromString('100'))
+    .times(BigDecimal.fromString('100'))
+
+  if (isUniqueUser) {
+    pool.uniqueUsers = pool.uniqueUsers.plus(BIG_INT_ONE)
+  }
+
+  pool.revenueUSD = pool.revenueUSD.plus(revenueUSD)
+
+  let poolEvent = new PoolEvent(0)
+  poolEvent.timestamp = event.block.timestamp.toI32();
+  poolEvent.pool = poolId
+  poolEvent.type = SWAP_EVENT
+  poolEvent.swapFeeUSD = feeUSD
+  poolEvent.swapRevenueUSD = revenueUSD
+  poolEvent.swapVolumeUSD = transactionVolume
+  poolEvent.poolValue = getPoolTokensLiquidity(poolAddress, pool.tokens.load())
+  poolEvent.poolTokensSupply = poolTokensSupply
+
+  pool.save()
+  poolEvent.save()
   swap.save()
   txSource.save()
   poolTxSource.save()

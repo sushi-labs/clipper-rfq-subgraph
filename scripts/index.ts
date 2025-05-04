@@ -176,6 +176,10 @@ async function fetchDeployment(source: string): Promise<Deployment> {
           address: '0xCE37051a3e60587157DC4c0391B4C555c6E68255',
           startBlock: 855590,
         },
+        {
+          address: '0xe90d415af331237ae18a882ec21870f1965be933',
+          startBlock: 576698,
+        },
       ],
       coves: [
         {

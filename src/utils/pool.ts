@@ -3,37 +3,40 @@ import { loadOrCreatePoolToken, loadToken } from './index'
 import { getUsdPrice } from './prices'
 import { fetchTokenBalance } from './token'
 import { ClipperDirectExchange } from '../../types/templates/ClipperDirectExchange/ClipperDirectExchange'
+import { Pool, PoolToken } from '../../types/schema'
+import { BIG_DECIMAL_ZERO } from '../constants'
 
-export function getCurrentPoolLiquidity(poolId: string, block: ethereum.Block): BigDecimal {
+export function loadOrCreatePoolTokens(poolId: string, block: ethereum.Block): PoolToken[] {
   let poolAddress = Address.fromString(poolId)
   let poolContract = ClipperDirectExchange.bind(poolAddress)
   let nTokens = poolContract.nTokens()
-  let currentLiquidity = BigDecimal.fromString('0')
-
-  if (Address.fromHexString(poolId).equals(Address.fromHexString('0xCE37051a3e60587157DC4c0391B4C555c6E68255'))) {
-    let hardcodedLiquidity = BigDecimal.fromString('550000')
-    log.info('Setting hardcoded liquidity to {}', [hardcodedLiquidity.toString()])
-    return hardcodedLiquidity
-  }
-
-  log.info('fetching liquidity from tokens', [])
+  let poolTokens: PoolToken[] = []
   for (let i = 0; i < nTokens.toI32(); i++) {
     let nToken = poolContract.try_tokenAt(BigInt.fromI32(i))
     if (!nToken.reverted) {
       let token = loadToken(nToken.value)
       let poolToken = loadOrCreatePoolToken(poolId, token, block)
-      let tokenBalance = fetchTokenBalance(token, poolAddress)
-      let tokenUsdPrice = getUsdPrice(token.symbol)
-      let usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
-  
-      currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
-  
-      poolToken.tvl = tokenBalance
-      poolToken.tvlUSD = tokenUsdPrice
-      poolToken.save()
+      poolTokens.push(poolToken)
     } else {
       log.info('Not able to fetch nToken {}', [i.toString()])
     }
+  }
+
+  return poolTokens
+}
+
+export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[]): BigDecimal {
+  let currentLiquidity = BIG_DECIMAL_ZERO
+  for (let i = 0; i < poolTokens.length; i++) {
+    const poolToken = poolTokens[i]
+    const token = loadToken(Address.fromString(poolToken.token))
+    const tokenBalance = fetchTokenBalance(token, poolAddress)
+    const tokenUsdPrice = getUsdPrice(token.symbol)
+    const usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
+    currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
+    poolToken.tvl = tokenBalance
+    poolToken.tvlUSD = tokenUsdPrice
+    poolToken.save()
   }
 
   return currentLiquidity

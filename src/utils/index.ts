@@ -94,7 +94,7 @@ export function loadOrCreatePoolToken(poolId: string, token: Token, block: ether
     poolToken.token = token.id
     poolToken.tvl = BIG_DECIMAL_ZERO
     poolToken.tvlUSD = BIG_DECIMAL_ZERO
-    poolToken.createdAt = block.timestamp
+    poolToken.createdAt = block.timestamp.toI32()
     poolToken.save()
   }
   return poolToken

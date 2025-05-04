@@ -20,8 +20,6 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - Pool
-        - DailyPoolStatus
-        - HourlyPoolStatus
         - PoolPair
         - PoolTransactionSource
         - Deposit
@@ -32,6 +30,7 @@ dataSources:
         - PoolPair
         - TransactionSource
         - User
+        - PoolEvent
       abis:
         - name: ClipperDirectExchange
           file: ./abis/ClipperDirectExchange.json
@@ -75,11 +74,11 @@ dataSources:
         - CoveDeposit
         - CoveWithdrawal
         - Cove
-        - HistoricCoveStatus
+        - CoveEvent
+        - CoveParent
         - UserCoveStake
-        - AllCovesHistoricStatus
-        - AllCoveStatus
         - User
+        - Pool
       abis:
         - name: ClipperCove
           file: ./abis/ClipperCove.json
@@ -111,9 +110,8 @@ templates:
       language: wasm/assemblyscript
       entities:
         - Pool
-        - DailyPoolStatus
-        - HourlyPoolStatus
         - PoolPair
+        - PoolEvent
         - PoolTransactionSource
         - Deposit
         - Withdrawal
@@ -123,6 +121,7 @@ templates:
         - PoolPair
         - TransactionSource
         - User
+        - PoolEvent
       abis:
         - name: ClipperDirectExchange
           file: ./abis/ClipperDirectExchange.json
@@ -162,11 +161,11 @@ templates:
         - CoveDeposit
         - CoveWithdrawal
         - Cove
-        - HistoricCoveStatus
+        - CoveEvent
+        - CoveParent
         - UserCoveStake
-        - AllCovesHistoricStatus
-        - AllCoveStatus
         - User
+        - Pool
       abis:
         - name: ClipperCove
           file: ./abis/ClipperCove.json
