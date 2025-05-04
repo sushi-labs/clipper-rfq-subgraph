@@ -1,4 +1,4 @@
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, log } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
 import { ERC20 } from '../../types/templates/ClipperDirectExchange/ERC20'
 import { Token } from '../../types/schema'
@@ -55,7 +55,7 @@ export function fetchTokenName(tokenAddress: Address): string {
 }
 
 export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
-  let tokenContract = ERC20.bind(Address.fromString(token.id))
+  let tokenContract = ERC20.bind(Address.fromBytes(token.id))
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(wallet)
 
@@ -63,15 +63,15 @@ export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
   if (!tokenBigBalanceResult.reverted) {
     tokenBigBalance = tokenBigBalanceResult.value
   } else {
-    log.info('Error fetching balance of {}', [token.id])
+    log.info('Error fetching balance of {}', [token.id.toHex()])
   }
   let tokenBalance = convertTokenToDecimal(tokenBigBalance, token.decimals)
 
   return tokenBalance
 }
 
-export function fetchBigIntTokenBalance(assetAddress: string, owner: Address): BigInt {
-  let tokenContract = ERC20.bind(Address.fromString(assetAddress))
+export function fetchBigIntTokenBalance(assetAddress: Address, owner: Address): BigInt {
+  let tokenContract = ERC20.bind(assetAddress)
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(owner)
 

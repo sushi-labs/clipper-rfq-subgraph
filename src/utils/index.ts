@@ -37,12 +37,12 @@ export function loadTransactionSource(auxData: Bytes): TransactionSource {
   return txSource as TransactionSource
 }
 
-export function loadPoolTransactionSource(poolId: string, txSourceId: string): PoolTransactionSource {
-  let poolTxSourceId = poolId.concat(txSourceId)
+export function loadPoolTransactionSource(poolAddress: Bytes, txSourceId: string): PoolTransactionSource {
+  let poolTxSourceId = poolAddress.toHex().concat(txSourceId)
   let poolTxSource = PoolTransactionSource.load(poolTxSourceId)
   if (!poolTxSource) {
     poolTxSource = new PoolTransactionSource(poolTxSourceId)
-    poolTxSource.pool = poolId
+    poolTxSource.pool = poolAddress
     poolTxSource.transactionSource = txSourceId
     poolTxSource.txCount = BIG_INT_ZERO
     poolTxSource.volumeUSD = BIG_DECIMAL_ZERO
@@ -51,12 +51,12 @@ export function loadPoolTransactionSource(poolId: string, txSourceId: string): P
   return poolTxSource
 }
 
-export function loadCoveTransactionSource(coveId: string, txSourceId: string): CoveTransactionSource {
-  let coveTxSourceId = coveId.concat(txSourceId)
+export function loadCoveTransactionSource(coveAddress: Bytes, txSourceId: string): CoveTransactionSource {
+  let coveTxSourceId = coveAddress.toHex().concat(txSourceId)
   let coveTxSource = CoveTransactionSource.load(coveTxSourceId)
   if (!coveTxSource) {
     coveTxSource = new CoveTransactionSource(coveTxSourceId)
-    coveTxSource.cove = coveId
+    coveTxSource.cove = coveAddress
     coveTxSource.transactionSource = txSourceId
     coveTxSource.txCount = BIG_INT_ZERO
     coveTxSource.volumeUSD = BIG_DECIMAL_ZERO
@@ -65,11 +65,12 @@ export function loadCoveTransactionSource(coveId: string, txSourceId: string): C
   return coveTxSource
 }
 
-export function loadToken(tokenAddress: Address): Token {
-  let token = Token.load(tokenAddress.toHex())
+export function loadToken(tokenAddressBytes: Bytes): Token {
+  let tokenAddress = Address.fromBytes(tokenAddressBytes)
+  let token = Token.load(tokenAddress)
 
   if (!token) {
-    token = new Token(tokenAddress.toHex())
+    token = new Token(tokenAddress)
     let symbol = fetchTokenSymbol(tokenAddress)
     token.symbol = symbol
     token.name = fetchTokenName(tokenAddress)
@@ -85,12 +86,16 @@ export function loadToken(tokenAddress: Address): Token {
   return token as Token
 }
 
-export function loadOrCreatePoolToken(poolId: string, token: Token, block: ethereum.Block): PoolToken {
-  let id = poolId.concat(token.id)
+function getPoolTokenId(poolAddress: Bytes, token: Token): Bytes {
+  return poolAddress.concat(token.id)
+}
+
+export function loadOrCreatePoolToken(poolAddress: Bytes, token: Token, block: ethereum.Block): PoolToken {
+  let id = getPoolTokenId(poolAddress, token)
   let poolToken = PoolToken.load(id)
   if (!poolToken) {
     poolToken = new PoolToken(id)
-    poolToken.pool = poolId
+    poolToken.pool = poolAddress
     poolToken.token = token.id
     poolToken.tvl = BIG_DECIMAL_ZERO
     poolToken.tvlUSD = BIG_DECIMAL_ZERO
@@ -100,8 +105,8 @@ export function loadOrCreatePoolToken(poolId: string, token: Token, block: ether
   return poolToken
 }
 
-export function loadPoolToken(poolId: string, token: Token): PoolToken {
-  let id = poolId.concat(token.id)
+export function loadPoolToken(poolAddress: Bytes, token: Token): PoolToken {
+  let id = getPoolTokenId(poolAddress, token)
   let poolToken = PoolToken.load(id)
   if (!poolToken) {
     throw new Error('Token is not part of the pool')

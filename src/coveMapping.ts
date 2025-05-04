@@ -1,8 +1,7 @@
-import { Address, BigDecimal } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, Bytes } from '@graphprotocol/graph-ts'
 import { CoveDeposited, CoveSwapped, CoveWithdrawn } from '../types/templates/ClipperCove/ClipperCove'
 import { Cove, CoveDeposit, CoveEvent, CoveWithdrawal, Swap } from '../types/schema'
-import { AddressZeroAddress } from './addresses'
-import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, WITHDRAWAL_EVENT } from './constants'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, WITHDRAWAL_EVENT } from './constants'
 import {
   loadCoveParent,
   loadCove,
@@ -44,7 +43,7 @@ export function handleCoveDeposited(event: CoveDeposited): void {
   userCoveStake.active = true
   userCoveStake.depositTokens = userCoveStake.depositTokens.plus(internalDepositTokens)
 
-  let newDeposit = new CoveDeposit(event.transaction.hash.toHexString())
+  let newDeposit = new CoveDeposit(event.transaction.hash)
   newDeposit.timestamp = event.block.timestamp.toI32()
   newDeposit.cove = cove.id
   newDeposit.amountUsd = estimatedUsdDepositValue
@@ -69,21 +68,19 @@ export function handleCoveDeposited(event: CoveDeposited): void {
 }
 
 export function handleCoveSwapped(event: CoveSwapped): void {
-  let inAssetAddress =
-    event.params.inAsset.toHex() == ADDRESS_ZERO ? Address.fromString(AddressZeroAddress) : event.params.inAsset
-  let outAssetAddress =
-    event.params.outAsset.toHex() == ADDRESS_ZERO ? Address.fromString(AddressZeroAddress) : event.params.outAsset
+  let inAssetAddress = event.params.inAsset
+  let outAssetAddress = event.params.outAsset
   let coveParent = loadCoveParent(event.address, event.block)
   let inAsset = loadToken(inAssetAddress)
   let outAsset = loadToken(outAssetAddress)
-  let poolAddress = Address.fromString(coveParent.pool)
+  let poolAddress = Address.fromBytes(coveParent.pool)
   let pool = loadPool(poolAddress, event.block)
   let poolShorttailAssets = pool.tokens.load()
-  let shorttailAssetMap = new Set<string>()
+  let shorttailAssetMap = new Set<Bytes>()
   // Add pool token to shorttailAssetMap
-  shorttailAssetMap.add(pool.id)
+  shorttailAssetMap.add(poolAddress)
   for (let i = 0; i < poolShorttailAssets.length; i++) {
-    shorttailAssetMap.add(poolShorttailAssets[i].token.toLowerCase())
+    shorttailAssetMap.add(poolShorttailAssets[i].token)
   }
 
   let inAmount = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
@@ -138,10 +135,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   outAsset.txCount = outAsset.txCount.plus(BIG_INT_ONE)
 
   let swap = new Swap(
-    event.transaction.hash
-      .toHex()
-      .concat('-')
-      .concat(event.logIndex.toString()),
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   swap.transaction = event.transaction.hash
   swap.timestamp = event.block.timestamp.toI32()
@@ -181,13 +175,13 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   coveParent.txCount = coveParent.txCount + 1
   coveParent.volumeUSD = coveParent.volumeUSD.plus(transactionVolume)
 
-  let isUnique = upsertUser(event.transaction.from.toHexString(), event.block.timestamp, transactionVolume)
+  let isUnique = upsertUser(event.transaction.from, event.block.timestamp, transactionVolume)
   if (isUnique) {
     pool.uniqueUsers = pool.uniqueUsers.plus(BIG_INT_ONE)
     pool.save()
   }
 
-  swap.sender = event.transaction.from.toHexString()
+  swap.sender = event.transaction.from
 
   if (inAssetCove) {
     let addedVolume = outAssetCove ? amountInUsd : transactionVolume
@@ -283,7 +277,7 @@ export function handleCoveWithdrawn(event: CoveWithdrawn): void {
   // multiply by two because the cove liquidity should be twice as the amount of pool tokens
   let estimatedUsdWithdrawalValue = coveLiquidity.times(withdrawnFraction)
 
-  let newWithdrawal = new CoveWithdrawal(event.transaction.hash.toHexString())
+  let newWithdrawal = new CoveWithdrawal(event.transaction.hash)
   newWithdrawal.timestamp = event.block.timestamp.toI32()
   newWithdrawal.cove = cove.id
   newWithdrawal.amountUsd = estimatedUsdWithdrawalValue

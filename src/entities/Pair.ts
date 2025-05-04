@@ -1,8 +1,8 @@
-import { BigDecimal } from '@graphprotocol/graph-ts'
+import { BigDecimal, Bytes } from '@graphprotocol/graph-ts'
 import { Pair, PoolPair } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
-export function loadPair(inAsset: string, outAsset: string): Pair {
+export function loadPair(inAsset: Bytes, outAsset: Bytes): Pair {
   let pairId = inAsset.concat(outAsset)
   let altPairId = outAsset.concat(inAsset)
 
@@ -25,7 +25,7 @@ export function loadPair(inAsset: string, outAsset: string): Pair {
   return pair as Pair
 }
 
-export function updatePair(inAsset: string, outAsset: string, addedTxVolume: BigDecimal): Pair {
+export function updatePair(inAsset: Bytes, outAsset: Bytes, addedTxVolume: BigDecimal): Pair {
   let pair = loadPair(inAsset, outAsset)
   pair.txCount = pair.txCount.plus(BIG_INT_ONE)
   pair.volumeUSD = pair.volumeUSD.plus(addedTxVolume)
@@ -35,14 +35,14 @@ export function updatePair(inAsset: string, outAsset: string, addedTxVolume: Big
   return pair
 }
 
-export function loadPoolPair(poolId: string, pairId: string): PoolPair {
-  let poolPairId = poolId.concat(pairId)
+export function loadPoolPair(poolAddress: Bytes, pairId: Bytes): PoolPair {
+  let poolPairId = poolAddress.concat(pairId)
 
   let poolPair = PoolPair.load(poolPairId)
 
   if (!poolPair) {
     poolPair = new PoolPair(poolPairId)
-    poolPair.pool = poolId
+    poolPair.pool = poolAddress
     poolPair.pair = pairId
     poolPair.txCount = BIG_INT_ZERO
     poolPair.volumeUSD = BIG_DECIMAL_ZERO
@@ -52,8 +52,8 @@ export function loadPoolPair(poolId: string, pairId: string): PoolPair {
   return poolPair
 }
 
-export function updatePoolPair(poolId: string, pairId: string, addedTxVolume: BigDecimal): PoolPair {
-  let poolPair = loadPoolPair(poolId, pairId)
+export function updatePoolPair(poolAddress: Bytes, pairId: Bytes, addedTxVolume: BigDecimal): PoolPair {
+  let poolPair = loadPoolPair(poolAddress, pairId)
   poolPair.txCount = poolPair.txCount.plus(BIG_INT_ONE)
   poolPair.volumeUSD = poolPair.volumeUSD.plus(addedTxVolume)
   poolPair.save()

@@ -5,7 +5,7 @@ enum SwapType {
 
 type Pool @entity(immutable: false) {
   # pool address
-  id: ID!
+  id: Bytes!
   createdAt: Timestamp!
   # all time USD swapped
   volumeUSD: BigDecimal!
@@ -125,7 +125,7 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
 
 type Token @entity(immutable: false) {
   # token address
-  id: ID!
+  id: Bytes!
   # token symbol
   symbol: String!
   # token name
@@ -145,7 +145,7 @@ type Token @entity(immutable: false) {
 }
 
 type PoolToken @entity(immutable: false) {
-  id: ID!
+  id: Bytes!
   pool: Pool!
   token: Token!
   createdAt: Timestamp!
@@ -157,7 +157,7 @@ type PoolToken @entity(immutable: false) {
 
 type Swap @entity(immutable: true) {
   # transaction hash + "-" + event log index
-  id: ID!
+  id: Bytes!
   # pointer to the pool
   pool: Pool
   # pointer to transaction
@@ -203,7 +203,7 @@ type Swap @entity(immutable: true) {
 
 type Pair @entity(immutable: false) {
   # asset 1 + asset 2 address
-  id: ID!
+  id: Bytes!
   # asset 0 of the pair
   asset0: Token!
   # asset 1 of the pair
@@ -219,7 +219,7 @@ type Pair @entity(immutable: false) {
 }
 
 type PoolPair @entity(immutable: false) {
-  id: ID!
+  id: Bytes!
   pool: Pool!
   pair: Pair!
   # all time transaction on this pair
@@ -259,7 +259,7 @@ type CoveTransactionSource @entity(immutable: false) {
 
 type User @entity(immutable: false) {
   # wallet address
-  id: ID!
+  id: Bytes!
   # number of all time transactions by user
   txCount: BigInt!
   # timestamp of first transaction
@@ -273,7 +273,7 @@ type User @entity(immutable: false) {
 }
 
 type Deposit @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   # timestamp of transaction
   timestamp: Timestamp!
   # pool deposited to
@@ -287,7 +287,7 @@ type Deposit @entity(immutable: true) {
 }
 
 type CoveDeposit @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   timestamp: Timestamp!
   cove: Cove!
   amountUsd: BigDecimal!
@@ -295,7 +295,7 @@ type CoveDeposit @entity(immutable: true) {
 }
 
 type Withdrawal @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   # timestamp of transaction
   timestamp: Timestamp!
   # pool to where the whitdrawal was done
@@ -309,7 +309,7 @@ type Withdrawal @entity(immutable: true) {
 }
 
 type CoveWithdrawal @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   timestamp: Timestamp!
   cove: Cove!
   amountUsd: BigDecimal!
@@ -318,7 +318,7 @@ type CoveWithdrawal @entity(immutable: true) {
 
 type CoveParent @entity(immutable: false) {
   "Id of smart contract"
-  id: ID!
+  id: Bytes!
   pool: Pool!
   createdAt: Timestamp!
   volumeUSD: BigDecimal!
@@ -360,7 +360,7 @@ type CoveParentStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent
 }
 
 type Cove @entity(immutable: false) {
-  id: ID!
+  id: Bytes!
   pool: Pool!
   # pointer to CoveAsset
   longtailAsset: Token!
@@ -414,7 +414,7 @@ type CoveStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
 
 type UserCoveStake @entity(immutable: false) {
   # {coveId}-{wallet}
-  id: ID!
+  id: Bytes!
   cove: Cove!
   user: Bytes!
   depositTokens: BigInt!

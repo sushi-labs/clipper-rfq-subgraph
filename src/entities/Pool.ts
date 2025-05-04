@@ -1,14 +1,13 @@
-import { Address, ethereum } from '@graphprotocol/graph-ts'
+import { Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { Pool } from '../../types/schema'
 import { loadOrCreatePoolTokens } from '../utils/pool'
 
-export function loadPool(address: Address, block: ethereum.Block): Pool {
-  let poolId = address.toHex()
-  let pool = Pool.load(poolId)
+export function loadPool(address: Bytes, block: ethereum.Block): Pool {
+  let pool = Pool.load(address)
 
   if (!pool) {
-    pool = new Pool(poolId)
+    pool = new Pool(address)
     pool.createdAt = block.timestamp.toI32()
     // swaps
     pool.avgTrade = BIG_DECIMAL_ZERO
@@ -35,7 +34,7 @@ export function loadPool(address: Address, block: ethereum.Block): Pool {
 
     pool.save()
 
-    loadOrCreatePoolTokens(poolId, block)
+    loadOrCreatePoolTokens(address, block)
   }
 
   return pool as Pool

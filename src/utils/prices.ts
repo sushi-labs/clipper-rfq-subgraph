@@ -1,7 +1,7 @@
-import { Address, BigDecimal, BigInt, ethereum, TypedMap } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, ethereum, TypedMap } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
 import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
-import { FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
+import { AddressZeroAddress, FallbackAssetPrice, PriceOracleAddresses } from '../addresses'
 import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN } from '../constants'
 import { getCoveBalances } from './cove'
 import { getPoolTokensLiquidity, getPoolTokenSupply } from './pool'
@@ -9,7 +9,7 @@ import { loadPool } from '../entities/Pool'
 
 export function getUsdPrice(tokenSymbol: string): BigDecimal {
   let priceOracleAddress = PriceOracleAddresses.get(tokenSymbol)
-  let oracleAddressString = priceOracleAddress ? priceOracleAddress.toString() : ADDRESS_ZERO
+  let oracleAddressString = priceOracleAddress ? priceOracleAddress.toString() : AddressZeroAddress
   let oracleValueExist = PriceOracleAddresses.isSet(tokenSymbol)
   let fallbackExist = FallbackAssetPrice.isSet(tokenSymbol)
 
@@ -31,16 +31,18 @@ export function getUsdPrice(tokenSymbol: string): BigDecimal {
   return usdValue
 }
 
-export function getCoveAssetPrice(poolId: string, coveAddress: Address, tokenAddress: Address, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
+export function getCoveAssetPrice(poolAddressBytes: Bytes, coveAddressBytes: Bytes, tokenAddressBytes: Bytes, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
+  let poolAddress = Address.fromBytes(poolAddressBytes)
+  let coveAddress = Address.fromBytes(coveAddressBytes)
+  let tokenAddress = Address.fromBytes(tokenAddressBytes)
   let balances = getCoveBalances(coveAddress, tokenAddress, decimals)
   let poolTokensAmount = balances[0]
   let longtailAssetBalance = balances[1]
 
-  let poolAddress = Address.fromString(poolId)
   let pool = loadPool(poolAddress, block)
   // gets the USD liquidity in our current pool
   let currentPoolLiquidity = getPoolTokensLiquidity(poolAddress, pool.tokens.load())
-  let poolTokenSupply = getPoolTokenSupply(poolId)
+  let poolTokenSupply = getPoolTokenSupply(poolAddress)
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
 
   let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)

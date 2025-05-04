@@ -1,4 +1,4 @@
-import { Address, BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from '@graphprotocol/graph-ts'
 import {
   AssetWithdrawn,
   Deposited,
@@ -26,7 +26,6 @@ import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitR
 export function handleDeposited(event: Deposited): void {
   let pool = loadPool(event.address, event.block)
   let timestamp = event.block.timestamp
-  let txHash = event.transaction.hash.toHexString()
   let tokens = loadOrCreatePoolTokens(pool.id, event.block)
   let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
@@ -36,9 +35,9 @@ export function handleDeposited(event: Deposited): void {
   let poolOwnedAmount = receivedPoolTokens.div(totalPoolTokens)
   let usdProportion = currentPoolLiquidity.times(poolOwnedAmount)
 
-  let newDeposit = new Deposit(txHash)
+  let newDeposit = new Deposit(event.transaction.hash)
   newDeposit.timestamp = timestamp.toI32()
-  newDeposit.pool = event.address.toHexString()
+  newDeposit.pool = event.address
   newDeposit.poolTokens = receivedPoolTokens
   newDeposit.amountUsd = usdProportion
 
@@ -67,7 +66,7 @@ export function handleDeposited(event: Deposited): void {
   pool.save()
 }
 
-function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Address): void {
+function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Bytes): void {
   let pool = loadPool(event.address, event.block)
   let tokens = loadOrCreatePoolTokens(pool.id, event.block)
   let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
@@ -79,11 +78,11 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   let burntProportion = burntPoolTokens.div(totalPoolTokens.plus(burntPoolTokens))
   let usdProportion = currentPoolLiquidity.times(burntProportion)
 
-  let newWithdrawal = new Withdrawal(event.transaction.hash.toHexString())
+  let newWithdrawal = new Withdrawal(event.transaction.hash)
   newWithdrawal.timestamp = event.block.timestamp.toI32()
   newWithdrawal.amountUsd = usdProportion
   newWithdrawal.poolTokens = burntPoolTokens
-  newWithdrawal.pool = event.address.toHexString()
+  newWithdrawal.pool = event.address
   newWithdrawal.withdrawer = withdrawer
 
   let poolEvent = new PoolEvent(0)
@@ -114,11 +113,10 @@ export function handleSingleAssetWithdrawn(event: AssetWithdrawn): void {
 
 export function handleSwapped(event: Swapped): void {
   let poolAddress = event.address
-  let poolId = poolAddress.toHexString()
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
-  let poolInAsset = loadPoolToken(poolId, inAsset)
-  let poolOutAsset = loadPoolToken(poolId, outAsset)
+  let poolInAsset = loadPoolToken(poolAddress, inAsset)
+  let poolOutAsset = loadPoolToken(poolAddress, outAsset)
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
   let amountOut = convertTokenToDecimal(event.params.outAmount, outAsset.decimals)
   let inputPrice = getUsdPrice(inAsset.symbol)
@@ -128,10 +126,7 @@ export function handleSwapped(event: Swapped): void {
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
 
   let swap = new Swap(
-    event.transaction.hash
-      .toHex()
-      .concat('-')
-      .concat(event.logIndex.toString()),
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   swap.transaction = event.transaction.hash
   swap.timestamp = event.block.timestamp.toI32()
@@ -148,7 +143,7 @@ export function handleSwapped(event: Swapped): void {
   swap.pricePerOutputToken = outputPrice
   swap.amountInUSD = amountInUsd
   swap.amountOutUSD = amountOutUsd
-  swap.pool = poolId
+  swap.pool = poolAddress
   swap.swapType = 'POOL'
 
   let feeUSD = amountInUsd.minus(amountOutUsd).lt(BIG_DECIMAL_ZERO) ? BIG_DECIMAL_ZERO : amountInUsd.minus(amountOutUsd)
@@ -187,7 +182,7 @@ export function handleSwapped(event: Swapped): void {
   }
 
   let txSource = loadTransactionSource(event.params.auxiliaryData)
-  let poolTxSource = loadPoolTransactionSource(poolId, txSource.id)
+  let poolTxSource = loadPoolTransactionSource(poolAddress, txSource.id)
   swap.transactionSource = txSource.id
   txSource.txCount = txSource.txCount.plus(BIG_INT_ONE)
   txSource.volumeUSD = txSource.volumeUSD.plus(transactionVolume)
@@ -195,23 +190,23 @@ export function handleSwapped(event: Swapped): void {
   poolTxSource.volumeUSD = poolTxSource.volumeUSD.plus(transactionVolume)
 
   let workingPair = updatePair(
-    event.params.inAsset.toHexString(),
-    event.params.outAsset.toHexString(),
+    event.params.inAsset,
+    event.params.outAsset,
     transactionVolume,
   )
-  updatePoolPair(poolId, workingPair.id, transactionVolume)
+  updatePoolPair(poolAddress, workingPair.id, transactionVolume)
   swap.pair = workingPair.id
-  swap.sender = event.transaction.from.toHexString()
+  swap.sender = event.transaction.from
   
-  let isUniqueUser = upsertUser(event.transaction.from.toHexString(), event.block.timestamp, transactionVolume)
+  let isUniqueUser = upsertUser(event.transaction.from, event.block.timestamp, transactionVolume)
 
-  let poolTokensSupply = getPoolTokenSupply(poolId)
-  let feeSplitAddresses = ClipperFeeSplitAddressesByDirectExchange.get(poolId.toLowerCase())
+  let poolTokensSupply = getPoolTokenSupply(poolAddress)
+  let feeSplitAddresses = ClipperFeeSplitAddressesByDirectExchange.get(poolAddress.toHexString().toLowerCase())
   let poolTokenOwnedByFeeSplit: BigInt = BIG_INT_ZERO
   if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
     for (let i = 0; i < feeSplitAddresses.length; i++) {
       poolTokenOwnedByFeeSplit = poolTokenOwnedByFeeSplit.plus(
-        fetchBigIntTokenBalance(poolId, Address.fromString(feeSplitAddresses[i])),
+        fetchBigIntTokenBalance(poolAddress, Address.fromString(feeSplitAddresses[i])),
       )
     }
   }
@@ -242,7 +237,7 @@ export function handleSwapped(event: Swapped): void {
 
   let poolEvent = new PoolEvent(0)
   poolEvent.timestamp = event.block.timestamp.toI32();
-  poolEvent.pool = poolId
+  poolEvent.pool = poolAddress
   poolEvent.type = SWAP_EVENT
   poolEvent.swapFeeUSD = feeUSD
   poolEvent.swapRevenueUSD = revenueUSD
@@ -261,7 +256,7 @@ export function handleTransfer(event: Transfer): void {
   let permitRouter = PermitRoutersByPool.get(event.address.toHexString().toLowerCase())
 
   if (permitRouter && event.params.from.equals(permitRouter)) {
-    let deposit = Deposit.load(event.transaction.hash.toHexString())
+    let deposit = Deposit.load(event.transaction.hash)
     if (!deposit) {
       return
     }

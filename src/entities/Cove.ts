@@ -1,4 +1,4 @@
-import { Bytes, BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
+import { Address, Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { Cove, CoveParent, UserCoveStake } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { loadToken } from '../utils'
@@ -6,21 +6,20 @@ import { loadPool } from './Pool'
 import { getCovePoolAddress } from '../utils/cove'
 
 export function loadCove(
-  coveAddress: Address,
-  tokenAddress: Address,
+  coveParentAddressBytes: Bytes,
+  tokenAddress: Bytes,
   creator: Bytes,
   block: ethereum.Block,
   transaction: Bytes,
 ): Cove {
-  let id = coveAddress
-    .toHexString()
-    .concat('-')
-    .concat(tokenAddress.toHexString())
+  let coveParentAddress = Address.fromBytes(coveParentAddressBytes)
+  let id = coveParentAddress
+    .concat(tokenAddress)
   let cove = Cove.load(id)
 
   if (!cove) {
     let coveAsset = loadToken(tokenAddress)
-    let poolAddress = getCovePoolAddress(coveAddress)
+    let poolAddress = getCovePoolAddress(coveParentAddress)
     let pool = loadPool(poolAddress, block)
 
     cove = new Cove(id)
@@ -53,14 +52,14 @@ export function loadCove(
   return cove as Cove
 }
 
-export function loadUserCoveStake(coveId: string, userWallet: Address): UserCoveStake {
-  let id = coveId.concat('-').concat(userWallet.toHexString())
+export function loadUserCoveStake(coveAddress: Bytes, userWallet: Bytes): UserCoveStake {
+  let id = coveAddress.concat(userWallet)
   let stake = UserCoveStake.load(id)
 
   if (!stake) {
     stake = new UserCoveStake(id)
     stake.user = userWallet
-    stake.cove = coveId
+    stake.cove = coveAddress
     stake.depositTokens = BIG_INT_ZERO
     stake.active = true
 
@@ -70,12 +69,13 @@ export function loadUserCoveStake(coveId: string, userWallet: Address): UserCove
   return stake as UserCoveStake
 }
 
-export function loadCoveParent(coveAddress: Address, block: ethereum.Block): CoveParent {
-  let parent = CoveParent.load(coveAddress.toHexString())
+export function loadCoveParent(coveParentAddressBytes: Bytes, block: ethereum.Block): CoveParent {
+  let coveParentAddress = Address.fromBytes(coveParentAddressBytes)
+  let parent = CoveParent.load(coveParentAddress)
 
   if (!parent) {
-    parent = new CoveParent(coveAddress.toHexString())
-    let poolAddress = getCovePoolAddress(coveAddress)
+    parent = new CoveParent(coveParentAddress)
+    let poolAddress = getCovePoolAddress(coveParentAddress)
     let pool = loadPool(poolAddress, block)
     parent.pool = pool.id
     parent.createdAt = block.timestamp.toI32()
