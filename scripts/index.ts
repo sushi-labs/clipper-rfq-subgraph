@@ -4,6 +4,7 @@ import path from 'path'
 import { isAddress } from 'viem/utils'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import { fetchDailyPrices } from './fetchHistoricalPricesCryptoCompare'
 
 interface PoolConfig {
   address: string
@@ -22,6 +23,7 @@ interface CoveConfig {
 interface PriceOracleConfig {
   symbol: string
   address: string
+  startBlock?: number
 }
 
 interface Deployment {
@@ -41,37 +43,26 @@ interface Deployment {
   }
 
   fallbackPrices?: {
-    WETH: number
-    MOVR: number
-    DAI: number
-    USDC: number
-    USDT: number
-    WBTC: number
-    GLMR: number
-    MATIC: number
-    DOT: number
-    LINK: number
-    GYEN: number
+    [token: string]: number | undefined
+  }
+
+  // Add daily fallback prices
+  dailyFallbackPrices?: {
+    [timestamp: string]: {
+      [token: string]: number | undefined
+    }
   }
 }
 
-async function fetchDeployment(source: string): Promise<Deployment> {
+// Helper function to get the deployment for a source
+const getDeploymentForSource = (source: string): Deployment => {
   const commonConfig = {
     priceOracles: [] as PriceOracleConfig[],
     prune: 'auto' as const,
-    // as of 19/03/2022 at 00:20 AM ET.
     fallbackPrices: {
-      WETH: 2948.37,
-      MOVR: 53.88,
       DAI: 1,
       USDC: 1,
       USDT: 1,
-      WBTC: 41741.74,
-      GLMR: 2.74,
-      MATIC: 1.52,
-      DOT: 19.03,
-      LINK: 14.91,
-      GYEN: 0.008391,
     },
     pools: [] as PoolConfig[],
     coves: [] as CoveConfig[],
@@ -356,11 +347,11 @@ async function fetchDeployment(source: string): Promise<Deployment> {
       prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
 
       priceOracles: [
-        { symbol: 'WETH', address: '0x5bc7Cf88EB131DB18b5d7930e793095140799aD5' },
-        { symbol: 'WBTC', address: '0x7db2275279F52D0914A481e14c4Ce5a59705A25b' },
-        { symbol: 'USDC', address: '0x22b422CECb0D4Bd5afF3EA999b048FA17F5263bD' },
-        { symbol: 'USDT', address: '0xd86048D5e4fe96157CE03Ae519A9045bEDaa6551' },
-        { symbol: 'WMNT', address: '0xD97F20bEbeD74e8144134C4b148fE93417dd0F96' },
+        { symbol: 'WETH', address: '0x5bc7Cf88EB131DB18b5d7930e793095140799aD5', startBlock: 74405378 },
+        { symbol: 'WBTC', address: '0x7db2275279F52D0914A481e14c4Ce5a59705A25b', startBlock: 74402393 },
+        { symbol: 'USDC', address: '0x22b422CECb0D4Bd5afF3EA999b048FA17F5263bD', startBlock: 74405888 },
+        { symbol: 'USDT', address: '0xd86048D5e4fe96157CE03Ae519A9045bEDaa6551', startBlock: 74406306 },
+        { symbol: 'MNT', address: '0xD97F20bEbeD74e8144134C4b148fE93417dd0F96', startBlock: 74406588 },
       ],
     }
   }
@@ -373,13 +364,32 @@ yargs(hideBin(process.argv))
     'template',
     'Generate files from templates using the deployment addresses.',
     yargs => {
-      return yargs.option('deployment', {
-        type: 'string',
-        default: 'matic',
-      })
+      return yargs
+        .option('deployment', {
+          type: 'string',
+          default: 'matic',
+          description: 'The deployment to update',
+        })
+        .option('fallback-prices-start-date', {
+          type: 'string',
+          description: 'Start date in YYYY-MM-DD format for fetching daily fallback prices',
+        })
+        .option('fallback-prices-end-date', {
+          type: 'string',
+          description: 'End date in YYYY-MM-DD format for fetching daily fallback prices',
+        })
+        .option('fallback-prices-tokens', {
+          type: 'array',
+          description: 'Tokens to fetch fallback prices for',
+        })
+        .option('fallback-prices-output', {
+          type: 'string',
+          default: './prices.json',
+          description: 'Path to save the raw fallback price data',
+        })
     },
     async args => {
-      const deploymentJson = await fetchDeployment(args.deployment)
+      let deploymentJson: any
 
       handlebars.registerHelper('ifAddress', function(possibleAddress: string, options: any) {
         if (isAddress(possibleAddress)) {
@@ -388,6 +398,36 @@ yargs(hideBin(process.argv))
           return options.inverse(this)
         }
       })
+
+      // Check if we need to fetch daily fallback prices
+      if (args['fallback-prices-start-date'] && args['fallback-prices-end-date']) {
+        const startDate = args['fallback-prices-start-date'] as string
+        const endDate = args['fallback-prices-end-date'] as string
+        const tokens = args['fallback-prices-tokens'] as string[]
+        const outputPath = args['fallback-prices-output'] as string
+
+        console.log(`Fetching daily fallback prices for ${tokens.join(', ')} from ${startDate} to ${endDate}...`)
+
+        try {
+          // Fetch daily prices
+          const dailyPrices = await fetchDailyPrices(tokens, startDate, endDate)
+
+          // Save raw price data
+          fs.writeFileSync(outputPath, JSON.stringify(dailyPrices, null, 2))
+          console.log(`Raw fallback price data saved to ${outputPath}`)
+
+          // Format prices for deployment config
+          // Get deployment with daily fallback prices
+          deploymentJson = getDeploymentForSource(args.deployment)
+          deploymentJson.dailyFallbackPrices = dailyPrices
+        } catch (error) {
+          console.error('Error fetching daily fallback prices:', error)
+          process.exit(1)
+        }
+      } else {
+        // Get deployment without daily fallback prices
+        deploymentJson = getDeploymentForSource(args.deployment)
+      }
 
       {
         console.log('Generating subgraph manifest')

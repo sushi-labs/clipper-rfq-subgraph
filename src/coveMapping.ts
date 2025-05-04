@@ -118,12 +118,12 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   }
 
   if (!inAssetCove) {
-    inputPrice = getUsdPrice(inAsset.symbol)
+    inputPrice = getUsdPrice(inAsset.symbol, event.block)
     inTokenBalance = fetchTokenBalance(inAsset, poolAddress)
   }
 
   if (!outAssetCove) {
-    outputPrice = getUsdPrice(outAsset.symbol)
+    outputPrice = getUsdPrice(outAsset.symbol, event.block)
     outTokenBalance = fetchTokenBalance(outAsset, poolAddress)
   }
 

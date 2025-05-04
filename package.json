@@ -10,7 +10,7 @@
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",
-    "pre:codegen:mantle": "rimraf types && yarn script template --deployment mantle",
+    "pre:codegen:mantle": "rimraf types && yarn script template --deployment mantle --fallback-prices-start-date 2023-09-05 --fallback-prices-end-date 2025-01-17 --fallback-prices-tokens WETH WBTC WMNT",
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:optimism": "graph deploy clipper-optimism",
@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.97.0",
-    "@graphprotocol/graph-ts": "0.35.1"
+    "@graphprotocol/graph-ts": "0.35.1",
+    "axios": "^1.8.2"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",

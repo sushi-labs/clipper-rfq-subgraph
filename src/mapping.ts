@@ -27,7 +27,7 @@ export function handleDeposited(event: Deposited): void {
   let pool = loadPool(event.address, event.block)
   let timestamp = event.block.timestamp
   let tokens = pool.tokens.load()
-  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
+  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens, event.block)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
   let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
@@ -69,7 +69,7 @@ export function handleDeposited(event: Deposited): void {
 function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Bytes): void {
   let pool = loadPool(event.address, event.block)
   let tokens = pool.tokens.load()
-  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
+  let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens, event.block)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
 
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
@@ -119,8 +119,8 @@ export function handleSwapped(event: Swapped): void {
   let poolOutAsset = loadPoolToken(poolAddress, outAsset)
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
   let amountOut = convertTokenToDecimal(event.params.outAmount, outAsset.decimals)
-  let inputPrice = getUsdPrice(inAsset.symbol)
-  let outputPrice = getUsdPrice(outAsset.symbol)
+  let inputPrice = getUsdPrice(inAsset.symbol, event.block)
+  let outputPrice = getUsdPrice(outAsset.symbol, event.block)
   let amountInUsd = inputPrice.times(amountIn)
   let amountOutUsd = outputPrice.times(amountOut)
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
@@ -242,7 +242,7 @@ export function handleSwapped(event: Swapped): void {
   poolEvent.swapFeeUSD = feeUSD
   poolEvent.swapRevenueUSD = revenueUSD
   poolEvent.swapVolumeUSD = transactionVolume
-  poolEvent.poolValue = getPoolTokensLiquidity(poolAddress, pool.tokens.load())
+  poolEvent.poolValue = getPoolTokensLiquidity(poolAddress, pool.tokens.load(), event.block)
   poolEvent.poolTokensSupply = poolTokensSupply
 
   pool.save()

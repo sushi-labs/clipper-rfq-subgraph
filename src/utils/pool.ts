@@ -31,13 +31,13 @@ export function loadOrCreatePoolTokens(poolAddress: Bytes, block: ethereum.Block
   return poolTokens
 }
 
-export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[]): BigDecimal {
+export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[], block: ethereum.Block): BigDecimal {
   let currentLiquidity = BIG_DECIMAL_ZERO
   for (let i = 0; i < poolTokens.length; i++) {
     const poolToken = poolTokens[i]
     const token = loadToken(poolToken.token)
     const tokenBalance = fetchTokenBalance(token, poolAddress)
-    const tokenUsdPrice = getUsdPrice(token.symbol)
+    const tokenUsdPrice = getUsdPrice(token.symbol, block)
     const usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
     currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
     poolToken.tvl = tokenBalance

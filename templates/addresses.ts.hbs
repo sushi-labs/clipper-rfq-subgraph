@@ -27,23 +27,28 @@ ClipperFeeSplitAddressesByDirectExchange.set('{{address}}'.toLowerCase(), feeSpl
 {{/each}}
 
 export let PriceOracleAddresses = new TypedMap<string, string>()
+export let OracleStartBlocks = new TypedMap<string, string>()
 {{#each priceOracles}}
 PriceOracleAddresses.set('{{symbol}}', '{{address}}')
+{{#if startBlock}}
+OracleStartBlocks.set('{{symbol}}', '{{startBlock}}')
+{{/if}}
 {{/each}}
 
 export let FallbackAssetPrice = new TypedMap<string, string>()
-FallbackAssetPrice.set('GLMR', '{{fallbackPrices.GLMR}}')
-FallbackAssetPrice.set('MOVR', '{{fallbackPrices.MOVR}}')
-FallbackAssetPrice.set('WETH', '{{fallbackPrices.WETH}}')
-FallbackAssetPrice.set('USDT', '{{fallbackPrices.USDT}}')
-FallbackAssetPrice.set('DAI', '{{fallbackPrices.DAI}}')
-FallbackAssetPrice.set('USDC', '{{fallbackPrices.USDC}}')
-FallbackAssetPrice.set('WBTC', '{{fallbackPrices.WBTC}}')
-FallbackAssetPrice.set('GYEN', '{{fallbackPrices.GYEN}}')
-FallbackAssetPrice.set('MATIC', '{{fallbackPrices.MATIC}}')
-FallbackAssetPrice.set('WMATIC', '{{fallbackPrices.MATIC}}')
-FallbackAssetPrice.set('DOT', '{{fallbackPrices.DOT}}')
-FallbackAssetPrice.set('LINK', '{{fallbackPrices.LINK}}')
+{{#each fallbackPrices}}
+FallbackAssetPrice.set('{{@key}}', '{{this}}')
+{{/each}}
+
+// Add daily fallback prices
+export let DailyFallbackPrices = new TypedMap<string, TypedMap<string, string>>()
+{{#each dailyFallbackPrices}}
+let prices_{{@key}} = new TypedMap<string, string>()
+{{#each this}}
+prices_{{@../key}}.set('{{@key}}', '{{this}}')
+{{/each}}
+DailyFallbackPrices.set('{{@key}}', prices_{{@key}})
+{{/each}}
 
 export let AddressZeroSymbol = '{{addressZeroMap.symbol}}'
 export let AddressZeroAddress = '{{addressZeroMap.address}}'
