@@ -356,6 +356,47 @@ const getDeploymentForSource = (source: string): Deployment => {
     }
   }
 
+  if (source === 'polygon-zkevm') {
+    return {
+      ...commonConfig,
+      networkName: 'polygon-zkevm',
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 3.2), // 1.5 months of blocks with 3.2s block time
+
+      pools: [
+        {
+          address: '0xae00af61be6861ee956c8e56bf22144d024acb57',
+          startBlock: 16665923,
+        },
+        {
+          address: '0xe38c90a0233f18749fb74e595c4de871e5498c13',
+          startBlock: 15320389,
+        },
+      ],
+
+      coves: [
+        {
+          address: '0x097Bf4a933747679698A97A9145Ce2c7f3c46042',
+          startBlock: 16665927,
+        },
+      ],
+
+      addressZeroMap: {
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ether',
+        address: '0x0000000000000000000000000000000000000000',
+      },
+
+      priceOracles: [
+        { symbol: 'POL', address: '0x44285b60Cc13557935CA4945d20475BD1f1058f4' },
+        { symbol: 'MATIC', address: '0x7C85dD6eBc1d318E909F22d51e756Cf066643341' },
+        { symbol: 'USDC', address: '0x0167D934CB7240e65c35e347F00Ca5b12567523a' },
+        { symbol: 'WETH', address: '0x97d9F9A00dEE0004BE8ca0A8fa374d486567eE2D' },
+        { symbol: 'USDT', address: '0x8499f6E7D6Ac56C83f66206035D33bD1908a8b5D' },
+      ],
+    }
+  }
+
   throw new Error('Unsupported deployment')
 }
 

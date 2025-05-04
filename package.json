@@ -10,6 +10,7 @@
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",
+    "pre:codegen:polygon-zkevm": "rimraf types && yarn script template --deployment polygon-zkevm",
     "pre:codegen:mantle": "rimraf types && yarn script template --deployment mantle --fallback-prices-start-date 2023-09-05 --fallback-prices-end-date 2025-01-17 --fallback-prices-tokens WETH WBTC WMNT",
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy clipper-polygon",
@@ -18,7 +19,8 @@
     "deploy:mantle": "goldsky subgraph deploy blade/v1-mantle --path .",
     "deploy:ethereum": "graph deploy clipper-mainnet",
     "deploy:arbitrum": "graph deploy clipper-arbitrum",
-    "deploy:base": "graph deploy clipper-base"
+    "deploy:base": "graph deploy clipper-base",
+    "deploy:polygon-zkevm": "graph deploy clipper-polygon-zkevm"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.97.0",
