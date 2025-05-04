@@ -1,7 +1,7 @@
 import { Address, BigDecimal, BigInt, Bytes, ethereum, log } from '@graphprotocol/graph-ts'
 import { loadOrCreatePoolToken, loadToken } from './index'
-import { getUsdPrice } from './prices'
-import { fetchTokenBalance } from './token'
+import { eth_getUsdPrice } from './prices'
+import { eth_fetchTokenBalance } from './token'
 import { ClipperDirectExchange } from '../../types/templates/ClipperDirectExchange/ClipperDirectExchange'
 import { PoolToken } from '../../types/schema'
 import { BIG_DECIMAL_ZERO } from '../constants'
@@ -31,13 +31,13 @@ export function loadOrCreatePoolTokens(poolAddress: Bytes, block: ethereum.Block
   return poolTokens
 }
 
-export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[], block: ethereum.Block): BigDecimal {
+export function eth_getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[], block: ethereum.Block): BigDecimal {
   let currentLiquidity = BIG_DECIMAL_ZERO
   for (let i = 0; i < poolTokens.length; i++) {
     const poolToken = poolTokens[i]
     const token = loadToken(poolToken.token)
-    const tokenBalance = fetchTokenBalance(token, poolAddress)
-    const tokenUsdPrice = getUsdPrice(token.symbol, block)
+    const tokenBalance = eth_fetchTokenBalance(token, poolAddress)
+    const tokenUsdPrice = eth_getUsdPrice(token.symbol, block)
     const usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
     currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
     poolToken.tvl = tokenBalance
@@ -48,7 +48,12 @@ export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolTok
   return currentLiquidity
 }
 
-export function getPoolTokenSupply(poolAddress: Bytes): BigInt {
+/*
+  Get the total supply of the pool token.
+  @param poolAddress - The address of the pool
+  @returns The total supply of the pool token
+*/
+export function eth_getPoolTokenSupply(poolAddress: Bytes): BigInt {
   let poolContract = ClipperDirectExchange.bind(Address.fromBytes(poolAddress))
   let poolTokenSupply = poolContract.totalSupply()
 

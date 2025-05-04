@@ -1,7 +1,7 @@
 import { Address, BigDecimal, BigInt, Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { CoveTransactionSource, PoolToken, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
-import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol } from './token'
+import { eth_fetchTokenDecimals, eth_fetchTokenName, eth_fetchTokenSymbol } from './token'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -71,10 +71,10 @@ export function loadToken(tokenAddressBytes: Bytes): Token {
 
   if (!token) {
     token = new Token(tokenAddress)
-    let symbol = fetchTokenSymbol(tokenAddress)
+    let symbol = eth_fetchTokenSymbol(tokenAddress)
     token.symbol = symbol
-    token.name = fetchTokenName(tokenAddress)
-    token.decimals = fetchTokenDecimals(tokenAddress)
+    token.name = eth_fetchTokenName(tokenAddress)
+    token.decimals = eth_fetchTokenDecimals(tokenAddress)
     token.txCount = BIG_INT_ZERO
     token.volume = BIG_DECIMAL_ZERO
     token.volumeUSD = BIG_DECIMAL_ZERO

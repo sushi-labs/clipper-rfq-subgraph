@@ -11,7 +11,7 @@ import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
  * @param tokenAddress - The address of the token
  * @returns The symbol of the token
  */
-export function fetchTokenSymbol(tokenAddress: Address): string {
+export function eth_fetchTokenSymbol(tokenAddress: Address): string {
   let contract = ERC20.bind(tokenAddress)
 
   if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
@@ -34,7 +34,7 @@ export function fetchTokenSymbol(tokenAddress: Address): string {
  * @param tokenAddress - The address of the token
  * @returns The decimals of the token
  */
-export function fetchTokenDecimals(tokenAddress: Address): BigInt {
+export function eth_fetchTokenDecimals(tokenAddress: Address): BigInt {
   let contract = ERC20.bind(tokenAddress)
   // try types uint8 for decimals
   let decimalValue = 18
@@ -54,7 +54,7 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
  * @param tokenAddress - The address of the token
  * @returns The name of the token
  */
-export function fetchTokenName(tokenAddress: Address): string {
+export function eth_fetchTokenName(tokenAddress: Address): string {
   if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
     return AddressZeroName
   }
@@ -72,7 +72,14 @@ export function fetchTokenName(tokenAddress: Address): string {
   return nameValue
 }
 
-export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
+/**
+ * Fetch the balance of a token.
+ * TODO: ETH_CALL removed
+ * @param token - The token entity
+ * @param wallet - The address of the wallet
+ * @returns The balance of the token
+ */
+export function eth_fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
   let tokenContract = ERC20.bind(Address.fromBytes(token.id))
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(wallet)
@@ -88,7 +95,14 @@ export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
   return tokenBalance
 }
 
-export function fetchBigIntTokenBalance(assetAddress: Address, owner: Address): BigInt {
+/**
+ * Fetch the balance of a token.
+ * TODO: ETH_CALL removed
+ * @param assetAddress - The address of the token
+ * @param owner - The address of the owner
+ * @returns The balance of the token
+ */
+export function eth_fetchBigIntTokenBalance(assetAddress: Address, owner: Address): BigInt {
   let tokenContract = ERC20.bind(assetAddress)
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(owner)

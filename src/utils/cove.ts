@@ -3,7 +3,7 @@ import { convertTokenToDecimal } from ".";
 import { ClipperCove } from "../../types/templates/ClipperCove/ClipperCove";
 import { BIG_INT_EIGHTEEN } from "../constants";
 
-export function getCoveBalances(coveParentAddress: Address, tokenAddress: Address, decimals: i32): Array<BigDecimal> {
+export function eth_getCoveBalances(coveParentAddress: Address, tokenAddress: Address, decimals: i32): Array<BigDecimal> {
   let coveContract = ClipperCove.bind(coveParentAddress)
   let lastBalances = coveContract.lastBalances(tokenAddress)
   
@@ -23,7 +23,7 @@ export function getCoveBalances(coveParentAddress: Address, tokenAddress: Addres
  * @param coveParentAddress - The address of the cove contract
  * @returns The address of the pool
  */
-export function getCovePoolAddress(coveParentAddress: Address): Address {
+export function eth_getCovePoolAddress(coveParentAddress: Address): Address {
   let coveContract = ClipperCove.bind(coveParentAddress)
   let poolAddress = coveContract.CLIPPER_EXCHANGE()
   

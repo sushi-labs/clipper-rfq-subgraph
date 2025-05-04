@@ -3,12 +3,19 @@ import { convertTokenToDecimal } from '.'
 import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
 import { FallbackAssetPrice, DailyFallbackPrices, PriceOracleAddresses, OracleStartBlocks, AddressZeroAddress } from '../addresses'
 import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY } from '../constants'
-import { getCoveBalances } from './cove'
-import { getPoolTokensLiquidity, getPoolTokenSupply } from './pool'
+import { eth_getCoveBalances } from './cove'
+import { eth_getPoolTokensLiquidity, eth_getPoolTokenSupply } from './pool'
 import { loadPool } from '../entities/Pool'
 import { getOpenTime } from './time'
 
-export function getUsdPrice(tokenSymbol: string, block: ethereum.Block): BigDecimal {
+/**
+ * Get the USD price of a token.
+ * TODO: ETH_CALL removed
+ * @param tokenSymbol - The symbol of the token
+ * @param block - The block number
+ * @returns The USD price of the token
+ */
+export function eth_getUsdPrice(tokenSymbol: string, block: ethereum.Block): BigDecimal {
   let priceOracleAddress = PriceOracleAddresses.get(tokenSymbol)
   let oracleAddressString = priceOracleAddress ? priceOracleAddress.toString() : AddressZeroAddress
   let oracleValueExist = PriceOracleAddresses.isSet(tokenSymbol)
@@ -54,18 +61,18 @@ export function getUsdPrice(tokenSymbol: string, block: ethereum.Block): BigDeci
   return usdValue
 }
 
-export function getCoveAssetPrice(poolAddressBytes: Bytes, coveAddressBytes: Bytes, tokenAddressBytes: Bytes, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
+export function eth_getCoveAssetPrice(poolAddressBytes: Bytes, coveAddressBytes: Bytes, tokenAddressBytes: Bytes, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
   let poolAddress = Address.fromBytes(poolAddressBytes)
   let coveAddress = Address.fromBytes(coveAddressBytes)
   let tokenAddress = Address.fromBytes(tokenAddressBytes)
-  let balances = getCoveBalances(coveAddress, tokenAddress, decimals)
+  let balances = eth_getCoveBalances(coveAddress, tokenAddress, decimals)
   let poolTokensAmount = balances[0]
   let longtailAssetBalance = balances[1]
 
   let pool = loadPool(poolAddress, block)
   // gets the USD liquidity in our current pool
-  let currentPoolLiquidity = getPoolTokensLiquidity(poolAddress, pool.tokens.load(), block)
-  let poolTokenSupply = getPoolTokenSupply(poolAddress)
+  let currentPoolLiquidity = eth_getPoolTokensLiquidity(poolAddress, pool.tokens.load(), block)
+  let poolTokenSupply = eth_getPoolTokenSupply(poolAddress)
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
 
   let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)

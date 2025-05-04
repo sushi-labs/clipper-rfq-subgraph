@@ -9,8 +9,8 @@ import {
 } from './entities/Cove'
 import { upsertUser } from './entities/User'
 import { convertTokenToDecimal, loadCoveTransactionSource, loadToken, loadTransactionSource } from './utils'
-import { getCoveAssetPrice, getUsdPrice } from './utils/prices'
-import { fetchTokenBalance } from './utils/token'
+import { eth_getCoveAssetPrice, eth_getUsdPrice } from './utils/prices'
+import { eth_fetchTokenBalance } from './utils/token'
 import { loadPool } from './entities/Pool'
 
 export function handleCoveDeposited(event: CoveDeposited): void {
@@ -24,7 +24,7 @@ export function handleCoveDeposited(event: CoveDeposited): void {
   let internalTotalDepositTokens = event.params.poolTokensAfterDeposit
 
   // general info
-  let coveInfo = getCoveAssetPrice(cove.pool, event.address, event.params.tokenAddress, coveAsset.decimals.toI32(), event.block)
+  let coveInfo = eth_getCoveAssetPrice(cove.pool, event.address, event.params.tokenAddress, coveAsset.decimals.toI32(), event.block)
   let covePoolTokens = coveInfo.get('poolTokenBalance') as BigDecimal
   let longTailTokens = coveInfo.get('longtailAssetBalance') as BigDecimal
   let coveLiquidity = coveInfo.get('coveLiquidity') as BigDecimal
@@ -101,7 +101,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   // There should only be one cove per swap, either in or out, but handling scenario where both are longtail for now
   if (!shorttailAssetMap.has(inAsset.id)) {
     inAssetCove = loadCove(event.address, inAssetAddress, event.params.recipient, event.block, event.transaction.hash)
-    let coveAssetPrice = getCoveAssetPrice(inAssetCove.pool, event.address, inAssetAddress, inAsset.decimals.toI32(), event.block)
+    let coveAssetPrice = eth_getCoveAssetPrice(inAssetCove.pool, event.address, inAssetAddress, inAsset.decimals.toI32(), event.block)
     inputPrice = coveAssetPrice.get('assetPrice') as BigDecimal
     inTokenBalance = coveAssetPrice.get('assetBalance') as BigDecimal
     inCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
@@ -110,7 +110,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
 
   if (!shorttailAssetMap.has(outAsset.id)) {
     outAssetCove = loadCove(event.address, outAssetAddress, event.params.recipient, event.block, event.transaction.hash)
-    let coveAssetPrice = getCoveAssetPrice(outAssetCove.pool, event.address, outAssetAddress, outAsset.decimals.toI32(), event.block)
+    let coveAssetPrice = eth_getCoveAssetPrice(outAssetCove.pool, event.address, outAssetAddress, outAsset.decimals.toI32(), event.block)
     outputPrice = coveAssetPrice.get('assetPrice') as BigDecimal
     outTokenBalance = coveAssetPrice.get('assetBalance') as BigDecimal
     outCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
@@ -118,13 +118,13 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   }
 
   if (!inAssetCove) {
-    inputPrice = getUsdPrice(inAsset.symbol, event.block)
-    inTokenBalance = fetchTokenBalance(inAsset, poolAddress)
+    inputPrice = eth_getUsdPrice(inAsset.symbol, event.block)
+    inTokenBalance = eth_fetchTokenBalance(inAsset, poolAddress)
   }
 
   if (!outAssetCove) {
-    outputPrice = getUsdPrice(outAsset.symbol, event.block)
-    outTokenBalance = fetchTokenBalance(outAsset, poolAddress)
+    outputPrice = eth_getUsdPrice(outAsset.symbol, event.block)
+    outTokenBalance = eth_fetchTokenBalance(outAsset, poolAddress)
   }
 
   let amountInUsd = inputPrice.times(inAmount)
@@ -255,7 +255,7 @@ export function handleCoveWithdrawn(event: CoveWithdrawn): void {
   let userCoveStake = loadUserCoveStake(cove.id, event.params.withdrawer)
   let coveParent = loadCoveParent(event.address, event.block)
 
-  let coveAssetPrice = getCoveAssetPrice(cove.pool, event.address, event.params.tokenAddress, coveAsset.decimals.toI32(), event.block)
+  let coveAssetPrice = eth_getCoveAssetPrice(cove.pool, event.address, event.params.tokenAddress, coveAsset.decimals.toI32(), event.block)
   let assetBalance = coveAssetPrice.get('assetBalance') as BigDecimal
   let covePoolTokenBalance = coveAssetPrice.get('poolTokenBalance') as BigDecimal
   let coveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal

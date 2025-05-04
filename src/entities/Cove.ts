@@ -3,7 +3,7 @@ import { Cove, CoveParent, UserCoveStake } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { loadToken } from '../utils'
 import { loadPool } from './Pool'
-import { getCovePoolAddress } from '../utils/cove'
+import { eth_getCovePoolAddress } from '../utils/cove'
 
 export function loadCove(
   coveParentAddressBytes: Bytes,
@@ -19,7 +19,7 @@ export function loadCove(
 
   if (!cove) {
     let coveAsset = loadToken(tokenAddress)
-    let poolAddress = getCovePoolAddress(coveParentAddress)
+    let poolAddress = eth_getCovePoolAddress(coveParentAddress)
     let pool = loadPool(poolAddress, block)
 
     cove = new Cove(id)
@@ -75,7 +75,7 @@ export function loadCoveParent(coveParentAddressBytes: Bytes, block: ethereum.Bl
 
   if (!parent) {
     parent = new CoveParent(coveParentAddress)
-    let poolAddress = getCovePoolAddress(coveParentAddress)
+    let poolAddress = eth_getCovePoolAddress(coveParentAddress)
     let pool = loadPool(poolAddress, block)
     parent.pool = pool.id
     parent.createdAt = block.timestamp.toI32()
