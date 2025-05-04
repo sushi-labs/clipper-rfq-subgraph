@@ -58,7 +58,6 @@ interface Deployment {
 const getDeploymentForSource = (source: string): Deployment => {
   const commonConfig = {
     priceOracles: [] as PriceOracleConfig[],
-    prune: 'auto' as const,
     fallbackPrices: {
       DAI: 1,
       USDC: 1,
@@ -161,6 +160,7 @@ const getDeploymentForSource = (source: string): Deployment => {
     return {
       ...commonConfig,
       networkName: 'moonbeam',
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 6), // 1.5 months of blocks with 6s block time
 
       pools: [
         {
