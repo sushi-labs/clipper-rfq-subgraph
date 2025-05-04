@@ -74,7 +74,6 @@ export function eth_fetchTokenName(tokenAddress: Address): string {
 
 /**
  * Fetch the balance of a token.
- * TODO: ETH_CALL removed
  * @param token - The token entity
  * @param wallet - The address of the wallet
  * @returns The balance of the token
@@ -97,7 +96,6 @@ export function eth_fetchTokenBalance(token: Token, wallet: Address): BigDecimal
 
 /**
  * Fetch the balance of a token.
- * TODO: ETH_CALL removed
  * @param assetAddress - The address of the token
  * @param owner - The address of the owner
  * @returns The balance of the token

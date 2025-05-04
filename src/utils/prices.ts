@@ -1,13 +1,13 @@
-import { Address, BigDecimal, BigInt, Bytes, ethereum, TypedMap } from '@graphprotocol/graph-ts'
-import { convertTokenToDecimal, loadToken } from '.'
+import { Address, BigDecimal, BigInt, Bytes, ethereum, log, TypedMap } from '@graphprotocol/graph-ts'
+import { convertTokenToDecimal } from './index'
 import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
 import {
   FallbackAssetPrice,
   DailyFallbackPrices,
-  PriceOracleAddresses,
+  PriceOracleByToken,
   OracleStartBlocks,
 } from '../addresses'
-import { BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY } from '../constants'
+import { BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
 import { eth_getCoveBalances } from './cove'
 import { loadPool } from '../entities/Pool'
 import { getOpenTime } from './time'
@@ -25,29 +25,20 @@ class TokenOraclePriceConfig {
     this.block = block
     this.fallbackPrice = null
 
-    let tokenSymbol = this.token.symbol
-    let oracleAddressString = PriceOracleAddresses.get(tokenSymbol)
-    this.oracleAddress = oracleAddressString ? Address.fromString(oracleAddressString) : null
-
-    let oracleValueExist = PriceOracleAddresses.isSet(tokenSymbol)
+    let tokenAddress = Address.fromBytes(this.token.id)
+    this.oracleAddress = PriceOracleByToken.get(tokenAddress)
+    let oracleStartBlock = OracleStartBlocks.get(tokenAddress)
 
     // Check if oracle is available at this block
-    let useOracle = !!oracleValueExist && this.oracleAddress !== null
-    if (useOracle && OracleStartBlocks.isSet(tokenSymbol)) {
-      let startBlock = OracleStartBlocks.get(tokenSymbol)
-      if (startBlock && block.number.lt(BigInt.fromString(startBlock))) {
-        useOracle = false // Oracle not yet available at this block
-      }
-    }
-    this.useOracle = useOracle
+    this.useOracle = this.oracleAddress !== null && oracleStartBlock !== null && block.number.lt(BigInt.fromString(oracleStartBlock))
 
     // Try to get daily fallback price first
-    let dayTimestamp = getOpenTime(block.timestamp, ONE_DAY).toString()
-    let fallbackExist = DailyFallbackPrices.isSet(dayTimestamp)
-    if (!useOracle && fallbackExist) {
-      let dailyPrices = DailyFallbackPrices.get(dayTimestamp)
-      if (dailyPrices && dailyPrices.isSet(tokenSymbol)) {
-        let price = dailyPrices.get(tokenSymbol)
+    let fallbackExist = DailyFallbackPrices.isSet(tokenAddress)
+    if (!this.useOracle && fallbackExist) {
+      let dailyPrices = DailyFallbackPrices.get(tokenAddress)
+      let dayTimestamp = getOpenTime(block.timestamp, ONE_DAY).toString()
+      if (dailyPrices && dailyPrices.isSet(dayTimestamp)) {
+        let price = dailyPrices.get(dayTimestamp)
         if (price) {
           this.fallbackPrice = BigDecimal.fromString(price.toString())
         } else {
@@ -57,9 +48,9 @@ class TokenOraclePriceConfig {
     }
 
     // Fall back to general fallback price if no daily price is available
-    fallbackExist = FallbackAssetPrice.isSet(tokenSymbol)
-    if (!useOracle && fallbackExist) {
-      let fallbackPrice = FallbackAssetPrice.get(tokenSymbol)
+    fallbackExist = FallbackAssetPrice.isSet(tokenAddress)
+    if (!this.useOracle && fallbackExist) {
+      let fallbackPrice = FallbackAssetPrice.get(tokenAddress)
       if (fallbackPrice) {
         this.fallbackPrice = BigDecimal.fromString(fallbackPrice.toString())
       } else {
@@ -69,30 +60,67 @@ class TokenOraclePriceConfig {
   }
 }
 
-/**
- * Get the USD price of a token.
- * TODO: ETH_CALL removed
- * @param tokenAddress - The address of the token
- * @param block - The block number
- * @returns The USD price of the token
- */
-export function eth_getTokenUsdPrice(token: Token, block: ethereum.Block): BigDecimal {
-  let tokenOraclePriceConfig = new TokenOraclePriceConfig(token, block)
+class TokenPrice {
+  token: Token
+  priceUSD: BigDecimal
+  priceSource: string
 
-  if (!tokenOraclePriceConfig.useOracle || !tokenOraclePriceConfig.oracleAddress) {
-    if (tokenOraclePriceConfig.fallbackPrice !== null) {
-      return tokenOraclePriceConfig.fallbackPrice
-    } else {
-      return BIG_DECIMAL_ZERO
-    }
+  constructor(token: Token, priceUSD: BigDecimal, priceSource: string) {
+    this.token = token
+    this.priceUSD = priceUSD
+    this.priceSource = priceSource
   }
+}
 
-  // Use oracle if available
-  let oracleContract = AggregatorV3Interface.bind(tokenOraclePriceConfig.oracleAddress)
+function eth_getOracleTokenUsdPrice(token: Token, oracleAddress: Address): TokenPrice {
+  let oracleContract = AggregatorV3Interface.bind(oracleAddress)
   let answer = oracleContract.latestRoundData()
   let decimals = oracleContract.decimals()
   let price = convertTokenToDecimal(answer.value1, BigInt.fromI32(decimals))
-  return price
+  return new TokenPrice(token, price, ORACLE_PRICE_SOURCE)
+}
+
+/**
+ * Get the USD price of a token with fallback or oracle.
+ * @param token - The token
+ * @param block - The block number
+ * @returns The USD price of the token
+ */
+export function eth_getTokenUsdPrice(token: Token, block: ethereum.Block): TokenPrice {
+  let tokenOraclePriceConfig = new TokenOraclePriceConfig(token, block)
+  let tokenOracleAddress = tokenOraclePriceConfig.oracleAddress
+  // If oracle is not available, use fallback price
+  if (!tokenOraclePriceConfig.useOracle || !tokenOracleAddress) {
+    let fallbackPrice = tokenOraclePriceConfig.fallbackPrice
+    if (fallbackPrice !== null) {
+      return new TokenPrice(token, fallbackPrice, SNAPSHOT_PRICE_SOURCE)
+    }
+    return new TokenPrice(token, BIG_DECIMAL_ZERO, SNAPSHOT_PRICE_SOURCE)
+  }
+
+  return eth_getOracleTokenUsdPrice(token, tokenOracleAddress)
+}
+
+/**
+ * Get the USD price of a token with fallback or cached from the token.
+ * @param token - The token
+ * @param block - The block number
+ * @returns The USD price of the token
+ */
+export function getTokenUsdPrice(token: Token, block: ethereum.Block): TokenPrice {
+  if (token.priceSource === ORACLE_PRICE_SOURCE) {
+    return new TokenPrice(token, token.priceUSD, ORACLE_PRICE_SOURCE)
+  }
+
+  let tokenPrice = eth_getTokenUsdPrice(token, block)
+  if (tokenPrice.priceUSD.notEqual(token.priceUSD) || token.priceSource !== tokenPrice.priceSource) {
+    token.priceUSD = tokenPrice.priceUSD
+    token.priceSource = tokenPrice.priceSource
+    token.priceUpdatedAt = block.timestamp.toI32()
+    token.save()
+  }
+
+  return tokenPrice
 }
 
 export function eth_getCoveAssetPrice(

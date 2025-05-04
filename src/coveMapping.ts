@@ -9,13 +9,13 @@ import {
 } from './entities/Cove'
 import { upsertUser } from './entities/User'
 import { convertTokenToDecimal, loadCoveTransactionSource, loadToken, loadTransactionSource } from './utils'
-import { eth_getCoveAssetPrice, eth_getTokenUsdPrice } from './utils/prices'
-import { eth_fetchTokenBalance } from './utils/token'
+import { eth_getCoveAssetPrice, getTokenUsdPrice } from './utils/prices'
+import { eth_getPoolAllTokensBalance } from './utils/pool'
 import { loadPool } from './entities/Pool'
 
 export function handleCoveDeposited(event: CoveDeposited): void {
   let cove = loadCove(event.address, event.params.tokenAddress, event.params.depositor, event.block, event.transaction.hash)
-  let coveAsset = loadToken(event.params.tokenAddress)
+  let coveAsset = loadToken(event.params.tokenAddress, event.block)
   let userCoveStake = loadUserCoveStake(cove.id, event.params.depositor)
   let coveParent = loadCoveParent(event.address, event.block)
 
@@ -71,10 +71,11 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   let inAssetAddress = event.params.inAsset
   let outAssetAddress = event.params.outAsset
   let coveParent = loadCoveParent(event.address, event.block)
-  let inAsset = loadToken(inAssetAddress)
-  let outAsset = loadToken(outAssetAddress)
+  let inAsset = loadToken(inAssetAddress, event.block)
+  let outAsset = loadToken(outAssetAddress, event.block)
   let poolAddress = Address.fromBytes(coveParent.pool)
   let pool = loadPool(poolAddress, event.block)
+  let allTokensBalance = eth_getPoolAllTokensBalance(poolAddress, event.block)
   let poolShorttailAssets = pool.tokens.load()
   let shorttailAssetMap = new Set<Bytes>()
   // Add pool token to shorttailAssetMap
@@ -117,14 +118,15 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     outCoveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal
   }
 
-  if (!inAssetCove) {
-    inputPrice = eth_getTokenUsdPrice(inAsset, event.block)
-    inTokenBalance = eth_fetchTokenBalance(inAsset, poolAddress)
-  }
-
-  if (!outAssetCove) {
-    outputPrice = eth_getTokenUsdPrice(outAsset, event.block)
-    outTokenBalance = eth_fetchTokenBalance(outAsset, poolAddress)
+  for (let i = 0; i < allTokensBalance.value1.length; i++) {
+    let tokenAddress = allTokensBalance.value1[i]
+    if (tokenAddress.equals(inAsset.id) && !inAssetCove) {
+      inputPrice = getTokenUsdPrice(inAsset, event.block).priceUSD
+      inTokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], inAsset.decimals)
+    } else if (tokenAddress.equals(outAsset.id) && !outAssetCove) {
+      outputPrice = getTokenUsdPrice(outAsset, event.block).priceUSD
+      outTokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], outAsset.decimals)
+    }
   }
 
   let amountInUsd = inputPrice.times(inAmount)
@@ -251,7 +253,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
 
 export function handleCoveWithdrawn(event: CoveWithdrawn): void {
   let cove = loadCove(event.address, event.params.tokenAddress, event.params.withdrawer, event.block, event.transaction.hash)
-  let coveAsset = loadToken(event.params.tokenAddress)
+  let coveAsset = loadToken(event.params.tokenAddress, event.block)
   let userCoveStake = loadUserCoveStake(cove.id, event.params.withdrawer)
   let coveParent = loadCoveParent(event.address, event.block)
 

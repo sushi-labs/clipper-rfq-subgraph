@@ -153,15 +153,15 @@ export async function fetchDailyPrices(
  * @param dailyPrices Object mapping timestamps to token prices
  * @param outputPath Path to save the JSON file
  */
-export function saveDailyPrices(
-  dailyPrices: { [timestamp: string]: { [token: string]: number } },
-  outputPath: string
-): void {
-  const outputDir = path.dirname(outputPath);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
+// export function saveDailyPrices(
+//   dailyPrices: { [timestamp: string]: { [token: string]: number } },
+//   outputPath: string
+// ): void {
+//   const outputDir = path.dirname(outputPath);
+//   if (!fs.existsSync(outputDir)) {
+//     fs.mkdirSync(outputDir, { recursive: true });
+//   }
   
-  fs.writeFileSync(outputPath, JSON.stringify(dailyPrices, null, 2));
-  console.log(`Daily prices saved to ${outputPath}`);
-}
+//   fs.writeFileSync(outputPath, JSON.stringify(dailyPrices, null, 2));
+//   console.log(`Daily prices saved to ${outputPath}`);
+// }

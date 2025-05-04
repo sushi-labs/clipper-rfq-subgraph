@@ -54,7 +54,7 @@ type PoolEvent @entity(timeseries: true) {
   timestamp: Timestamp!
   # Dimension: The pool this event relates to
   pool: Pool!
-  # Type of event:  0 = "DEPOSIT", 1 = "WITHDRAWAL", 2 = "SWAP"
+  # Type of event:  0 = "DEPOSIT", 1 = "WITHDRAWAL", 2 = "SWAP", 3 = "ORACLE_UPDATE"
   type: Int8!
   # Volume of the swap (USD) - only for SWAP events
   swapVolumeUSD: BigDecimal
@@ -86,8 +86,8 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
   volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
   # Total fees (USD) from swaps in the interval
   feeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapFeeUSD else 0 end")
-  # Total number of events in the interval (Int8! type)
-  txCount: Int8! @aggregate(fn: "count")
+  # Total number of events in the interval, ignoring oracle updates (Int8! type) 
+  txCount: Int8! @aggregate(fn: "sum", arg: "case when type != 3 then 1 else 0 end")
   # Number of swaps in the interval (Int8! type) - useful for client-side avg calculation
   swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
   # Number of deposits in the interval (Int8! type)
@@ -110,6 +110,10 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
   revenueUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapRevenueUSD else 0 end")
 }
 
+enum TokenPriceSource {
+  ORACLE
+  SNAPSHOT
+}
 
 type Token @entity(immutable: false) {
   # token address
@@ -130,6 +134,13 @@ type Token @entity(immutable: false) {
   deposited: BigDecimal!
   # total amount in USD deposited in pool
   depositedUSD: BigDecimal!
+  # price of the token in USD
+  priceUSD: BigDecimal!
+  priceSource: TokenPriceSource!
+  # last price update timestamp
+  priceUpdatedAt: Timestamp!
+
+  pools: [PoolToken!]! @derivedFrom(field: "token")
 }
 
 type PoolToken @entity(immutable: false) {

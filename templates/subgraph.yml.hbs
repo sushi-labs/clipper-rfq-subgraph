@@ -25,6 +25,7 @@ dataSources:
         - Deposit
         - Withdrawal
         - Token
+        - PoolToken
         - Swap
         - Pair
         - PoolPair
@@ -41,12 +42,20 @@ dataSources:
       eventHandlers:
         - event: Deposited(indexed address,uint256,uint256)
           handler: handleDeposited
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Withdrawn(indexed address,uint256,uint256)
           handler: handleWithdrawn
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: AssetWithdrawn(indexed address,uint256,indexed address,uint256)
           handler: handleSingleAssetWithdrawn
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
           handler: handleSwapped
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
           {{#ifAddress permitRouter}}
@@ -91,11 +100,43 @@ dataSources:
       eventHandlers:
         - event: CoveSwapped(indexed address,indexed address,indexed address,uint256,uint256,bytes32)
           handler: handleCoveSwapped
+          calls:
+            ClipperCove.inAssetLastBalances: ClipperCove[event.address].lastBalances(event.params.inAsset)
+            ClipperCove.outAssetLastBalances: ClipperCove[event.address].lastBalances(event.params.outAsset)
         - event: CoveDeposited(indexed address,indexed address,uint256,uint256)
           handler: handleCoveDeposited
+          calls:
+            ClipperCove.lastBalances: ClipperCove[event.address].lastBalances(event.params.tokenAddress)
         - event: CoveWithdrawn(indexed address,indexed address,uint256,uint256)
           handler: handleCoveWithdrawn
+          calls:
+            ClipperCove.lastBalances: ClipperCove[event.address].lastBalances(event.params.tokenAddress)
       file: ./src/coveMapping.ts
+{{/each}}
+{{#each priceOracles}}
+  - name: PriceOracle_{{address}}
+    kind: ethereum/contract
+    network: {{../networkName}}
+    source:
+      address: '{{address}}'
+      abi: AggregatorV3Interface
+      startBlock: {{indexingStartBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Pool
+        - PoolToken
+        - PoolEvent
+      abis:
+        - name: AggregatorV3Interface
+          file: ./abis/AggregatorV3Interface.json
+      eventHandlers:
+        - event: AnswerUpdated(indexed int256,indexed uint256,uint256)
+          handler: handlePriceUpdated
+      file: ./src/oracleMapping.ts
 {{/each}}
 
 templates:
@@ -132,12 +173,20 @@ templates:
       eventHandlers:
         - event: Deposited(indexed address,uint256,uint256)
           handler: handleDeposited
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Withdrawn(indexed address,uint256,uint256)
           handler: handleWithdrawn
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: AssetWithdrawn(indexed address,uint256,indexed address,uint256)
           handler: handleSingleAssetWithdrawn
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)
           handler: handleSwapped
+          calls:
+            ClipperDirectExchange.allTokensBalance: ClipperDirectExchange[event.address].allTokensBalance()
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
           {{#ifAddress permitRouter}}
@@ -178,8 +227,36 @@ templates:
       eventHandlers:
         - event: CoveSwapped(indexed address,indexed address,indexed address,uint256,uint256,bytes32)
           handler: handleCoveSwapped
+          calls:
+            ClipperCove.inAssetLastBalances: ClipperCove[event.address].lastBalances(event.params.inAsset)
+            ClipperCove.outAssetLastBalances: ClipperCove[event.address].lastBalances(event.params.outAsset)
         - event: CoveDeposited(indexed address,indexed address,uint256,uint256)
           handler: handleCoveDeposited
+          calls:
+            ClipperCove.lastBalances: ClipperCove[event.address].lastBalances(event.params.tokenAddress)
         - event: CoveWithdrawn(indexed address,indexed address,uint256,uint256)
           handler: handleCoveWithdrawn
+          calls:
+            ClipperCove.lastBalances: ClipperCove[event.address].lastBalances(event.params.tokenAddress)
       file: ./src/coveMapping.ts
+  - name: PriceOracle
+    kind: ethereum/contract
+    network: {{networkName}}
+    source:
+      abi: AggregatorV3Interface
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Pool
+        - PoolToken
+        - PoolEvent
+      abis:
+        - name: AggregatorV3Interface
+          file: ./abis/AggregatorV3Interface.json
+      eventHandlers:
+        - event: AnswerUpdated(indexed int256,indexed uint256,uint256)
+          handler: handlePriceUpdated
+      file: ./src/oracleMapping.ts

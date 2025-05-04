@@ -2,6 +2,7 @@ import { Address, BigDecimal, BigInt, Bytes, ethereum } from '@graphprotocol/gra
 import { CoveTransactionSource, PoolToken, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 import { eth_fetchTokenDecimals, eth_fetchTokenName, eth_fetchTokenSymbol } from './token'
+import { eth_getTokenUsdPrice } from './prices'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -65,7 +66,7 @@ export function loadCoveTransactionSource(coveAddress: Bytes, txSourceId: string
   return coveTxSource
 }
 
-export function loadToken(tokenAddressBytes: Bytes): Token {
+export function loadToken(tokenAddressBytes: Bytes, block: ethereum.Block): Token {
   let tokenAddress = Address.fromBytes(tokenAddressBytes)
   let token = Token.load(tokenAddress)
 
@@ -80,6 +81,10 @@ export function loadToken(tokenAddressBytes: Bytes): Token {
     token.volumeUSD = BIG_DECIMAL_ZERO
     token.deposited = BIG_DECIMAL_ZERO
     token.depositedUSD = BIG_DECIMAL_ZERO
+    let tokenPrice = eth_getTokenUsdPrice(token, block)
+    token.priceUSD = tokenPrice.priceUSD
+    token.priceSource = tokenPrice.priceSource
+    token.priceUpdatedAt = block.timestamp.toI32()
     token.save()
   }
 

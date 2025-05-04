@@ -18,7 +18,7 @@ export function loadCove(
   let cove = Cove.load(id)
 
   if (!cove) {
-    let coveAsset = loadToken(tokenAddress)
+    let coveAsset = loadToken(tokenAddress, block)
     let poolAddress = eth_getCovePoolAddress(coveParentAddress)
     let pool = loadPool(poolAddress, block)
 
