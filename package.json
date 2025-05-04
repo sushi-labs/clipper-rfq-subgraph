@@ -6,7 +6,7 @@
     "build": "graph build",
     "pre:codegen:polygon": "rimraf types && yarn script template --deployment matic",
     "pre:codegen:optimism": "rimraf types && yarn script template --deployment optimism",
-    "pre:codegen:moonbeam": "rimraf types && yarn script template --deployment moonbeam",
+    "pre:codegen:moonbeam": "rimraf types && yarn script template --deployment moonbeam  --fallback-prices-start-date 2022-01-10 --fallback-prices-end-date 2025-06-18 --fallback-prices-tokens WETH WBTC DOT GLMR",
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",

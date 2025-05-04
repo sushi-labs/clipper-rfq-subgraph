@@ -187,14 +187,22 @@ const getDeploymentForSource = (source: string): Deployment => {
       },
 
       priceOracles: [
-        { symbol: 'WETH', address: '0x9ce2388a1696e22F870341C3FC1E89710C7569B5' },
-        { symbol: 'WBTC', address: '0x8c4425e141979c66423A83bE2ee59135864487Eb' },
-        { symbol: 'USDC', address: '0xA122591F60115D63421f66F752EF9f6e0bc73abC' },
-        { symbol: 'USDT', address: '0xD925C5BF88Bd0ca09312625d429240F811b437c6' },
-        { symbol: 'DAI', address: '0x6063e1037B1afDA2bE5A3340757261E4d6a402ac' },
-        { symbol: 'DOT', address: '0x1466b4bD0C4B6B8e1164991909961e0EE6a66d8c' },
-        { symbol: 'GLMR', address: '0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb' },
+        { symbol: 'WETH', address: '0x9ce2388a1696e22F870341C3FC1E89710C7569B5', startBlock: 869081 },
+        { symbol: 'WBTC', address: '0x8c4425e141979c66423A83bE2ee59135864487Eb', startBlock: 869101 },
+        { symbol: 'USDC', address: '0xA122591F60115D63421f66F752EF9f6e0bc73abC', startBlock: 869161 },
+        { symbol: 'USDT', address: '0xD925C5BF88Bd0ca09312625d429240F811b437c6', startBlock: 2806696 },
+        { symbol: 'DAI', address: '0x6063e1037B1afDA2bE5A3340757261E4d6a402ac', startBlock: 3535022 },
+        { symbol: 'DOT', address: '0x1466b4bD0C4B6B8e1164991909961e0EE6a66d8c', startBlock: 1256763 },
+        { symbol: 'GLMR', address: '0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb', startBlock: 869142 },
       ],
+
+      fallbackPrices: { 
+        // as of 9/03/2025
+        MOVR: 6.12,
+        USDC: 1,
+        USDT: 1,
+        DAI: 1,
+      },
     }
   }
 
