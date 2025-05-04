@@ -1,8 +1,7 @@
 import { Address, BigDecimal, BigInt, Bytes, ethereum, log } from '@graphprotocol/graph-ts'
-import { loadOrCreatePoolToken, loadToken } from './index'
-import { eth_getUsdPrice } from './prices'
-import { eth_fetchTokenBalance } from './token'
-import { ClipperDirectExchange } from '../../types/templates/ClipperDirectExchange/ClipperDirectExchange'
+import { convertTokenToDecimal, loadOrCreatePoolToken, loadToken } from './index'
+import { eth_getTokenUsdPrice } from './prices'
+import { ClipperDirectExchange, ClipperDirectExchange__allTokensBalanceResult } from '../../types/templates/ClipperDirectExchange/ClipperDirectExchange'
 import { PoolToken } from '../../types/schema'
 import { BIG_DECIMAL_ZERO } from '../constants'
 
@@ -31,13 +30,28 @@ export function loadOrCreatePoolTokens(poolAddress: Bytes, block: ethereum.Block
   return poolTokens
 }
 
-export function eth_getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolToken[], block: ethereum.Block): BigDecimal {
+
+export function eth_getPoolAllTokensBalance(poolAddress: Address): ClipperDirectExchange__allTokensBalanceResult {
+  let poolContract = ClipperDirectExchange.bind(poolAddress)
+  return poolContract.allTokensBalance()
+}
+
+/**
+ * Update the liquidity of the pool tokens.
+ * Supports adding new tokens to the pool as the balances come from the pool assets set.
+ * @param poolAddress - The address of the pool
+ * @param allTokensBalance - The balance of all tokens in the pool
+ * @param block - The block number
+ * @returns The liquidity of the pool tokens
+ */
+export function eth_updatePoolTokensLiquidity(poolAddress: Address, allTokensBalance: ClipperDirectExchange__allTokensBalanceResult, block: ethereum.Block): BigDecimal {
   let currentLiquidity = BIG_DECIMAL_ZERO
-  for (let i = 0; i < poolTokens.length; i++) {
-    const poolToken = poolTokens[i]
-    const token = loadToken(poolToken.token)
-    const tokenBalance = eth_fetchTokenBalance(token, poolAddress)
-    const tokenUsdPrice = eth_getUsdPrice(token.symbol, block)
+  for (let i: i32 = 0; i < allTokensBalance.value0.length; i++) {
+    let tokenAddress = allTokensBalance.value1[i]
+    const token = loadToken(tokenAddress)
+    let tokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], token.decimals)
+    const poolToken = loadOrCreatePoolToken(poolAddress, token, block)
+    const tokenUsdPrice = eth_getTokenUsdPrice(token, block)
     const usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
     currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
     poolToken.tvl = tokenBalance

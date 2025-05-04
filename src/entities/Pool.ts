@@ -1,7 +1,7 @@
 import { Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { Pool } from '../../types/schema'
-import { loadOrCreatePoolTokens } from '../utils/pool'
+import { eth_getPoolTokenSupply, loadOrCreatePoolTokens } from '../utils/pool'
 
 export function loadPool(address: Bytes, block: ethereum.Block): Pool {
   let pool = Pool.load(address)
@@ -24,7 +24,10 @@ export function loadPool(address: Bytes, block: ethereum.Block): Pool {
     pool.withdrewUSD = BIG_DECIMAL_ZERO
     pool.withdrawalCount = BIG_INT_ZERO
 
-    pool.poolTokensSupply = BIG_INT_ZERO
+    // pool value in USD
+    pool.poolValueUSD = BIG_DECIMAL_ZERO
+
+    pool.poolTokensSupply = eth_getPoolTokenSupply(address)
     pool.uniqueUsers = BIG_INT_ZERO
 
     pool.save()

@@ -9,7 +9,7 @@ import {
 } from './entities/Cove'
 import { upsertUser } from './entities/User'
 import { convertTokenToDecimal, loadCoveTransactionSource, loadToken, loadTransactionSource } from './utils'
-import { eth_getCoveAssetPrice, eth_getUsdPrice } from './utils/prices'
+import { eth_getCoveAssetPrice, eth_getTokenUsdPrice } from './utils/prices'
 import { eth_fetchTokenBalance } from './utils/token'
 import { loadPool } from './entities/Pool'
 
@@ -118,12 +118,12 @@ export function handleCoveSwapped(event: CoveSwapped): void {
   }
 
   if (!inAssetCove) {
-    inputPrice = eth_getUsdPrice(inAsset.symbol, event.block)
+    inputPrice = eth_getTokenUsdPrice(inAsset, event.block)
     inTokenBalance = eth_fetchTokenBalance(inAsset, poolAddress)
   }
 
   if (!outAssetCove) {
-    outputPrice = eth_getUsdPrice(outAsset.symbol, event.block)
+    outputPrice = eth_getTokenUsdPrice(outAsset, event.block)
     outTokenBalance = eth_fetchTokenBalance(outAsset, poolAddress)
   }
 

@@ -1,67 +1,107 @@
 import { Address, BigDecimal, BigInt, Bytes, ethereum, TypedMap } from '@graphprotocol/graph-ts'
-import { convertTokenToDecimal } from '.'
+import { convertTokenToDecimal, loadToken } from '.'
 import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
-import { FallbackAssetPrice, DailyFallbackPrices, PriceOracleAddresses, OracleStartBlocks, AddressZeroAddress } from '../addresses'
-import { ADDRESS_ZERO, BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY } from '../constants'
+import {
+  FallbackAssetPrice,
+  DailyFallbackPrices,
+  PriceOracleAddresses,
+  OracleStartBlocks,
+} from '../addresses'
+import { BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY } from '../constants'
 import { eth_getCoveBalances } from './cove'
-import { eth_getPoolTokensLiquidity, eth_getPoolTokenSupply } from './pool'
 import { loadPool } from '../entities/Pool'
 import { getOpenTime } from './time'
+import { Token } from '../../types/schema'
+
+class TokenOraclePriceConfig {
+  token: Token
+  oracleAddress: Address | null
+  fallbackPrice: BigDecimal | null
+  useOracle: boolean
+  block: ethereum.Block
+
+  constructor(token: Token, block: ethereum.Block) {
+    this.token = token
+    this.block = block
+    this.fallbackPrice = null
+
+    let tokenSymbol = this.token.symbol
+    let oracleAddressString = PriceOracleAddresses.get(tokenSymbol)
+    this.oracleAddress = oracleAddressString ? Address.fromString(oracleAddressString) : null
+
+    let oracleValueExist = PriceOracleAddresses.isSet(tokenSymbol)
+
+    // Check if oracle is available at this block
+    let useOracle = !!oracleValueExist && this.oracleAddress !== null
+    if (useOracle && OracleStartBlocks.isSet(tokenSymbol)) {
+      let startBlock = OracleStartBlocks.get(tokenSymbol)
+      if (startBlock && block.number.lt(BigInt.fromString(startBlock))) {
+        useOracle = false // Oracle not yet available at this block
+      }
+    }
+    this.useOracle = useOracle
+
+    // Try to get daily fallback price first
+    let dayTimestamp = getOpenTime(block.timestamp, ONE_DAY).toString()
+    let fallbackExist = DailyFallbackPrices.isSet(dayTimestamp)
+    if (!useOracle && fallbackExist) {
+      let dailyPrices = DailyFallbackPrices.get(dayTimestamp)
+      if (dailyPrices && dailyPrices.isSet(tokenSymbol)) {
+        let price = dailyPrices.get(tokenSymbol)
+        if (price) {
+          this.fallbackPrice = BigDecimal.fromString(price.toString())
+        } else {
+          this.fallbackPrice = BIG_DECIMAL_ZERO
+        }
+      }
+    }
+
+    // Fall back to general fallback price if no daily price is available
+    fallbackExist = FallbackAssetPrice.isSet(tokenSymbol)
+    if (!useOracle && fallbackExist) {
+      let fallbackPrice = FallbackAssetPrice.get(tokenSymbol)
+      if (fallbackPrice) {
+        this.fallbackPrice = BigDecimal.fromString(fallbackPrice.toString())
+      } else {
+        this.fallbackPrice = BIG_DECIMAL_ZERO
+      }
+    }
+  }
+}
 
 /**
  * Get the USD price of a token.
  * TODO: ETH_CALL removed
- * @param tokenSymbol - The symbol of the token
+ * @param tokenAddress - The address of the token
  * @param block - The block number
  * @returns The USD price of the token
  */
-export function eth_getUsdPrice(tokenSymbol: string, block: ethereum.Block): BigDecimal {
-  let priceOracleAddress = PriceOracleAddresses.get(tokenSymbol)
-  let oracleAddressString = priceOracleAddress ? priceOracleAddress.toString() : AddressZeroAddress
-  let oracleValueExist = PriceOracleAddresses.isSet(tokenSymbol)
-  
-  // Check if oracle is available at this block
-  let useOracle = oracleValueExist && oracleAddressString !== ADDRESS_ZERO
-  if (useOracle && OracleStartBlocks.isSet(tokenSymbol)) {
-    let startBlock = OracleStartBlocks.get(tokenSymbol)
-    if (startBlock && block.number.lt(BigInt.fromString(startBlock))) {
-      useOracle = false // Oracle not yet available at this block
-    }
-  }
-  
-  // Try to get daily fallback price first
-  let dayTimestamp = getOpenTime(block.timestamp, ONE_DAY).toString()
-  let fallbackExist = DailyFallbackPrices.isSet(dayTimestamp)
-  if ((!useOracle) && fallbackExist) {
-    let dailyPrices = DailyFallbackPrices.get(dayTimestamp)
-    if (dailyPrices && dailyPrices.isSet(tokenSymbol)) {
-      let price = dailyPrices.get(tokenSymbol)
-      return BigDecimal.fromString(price ? price.toString() : '0')
-    }
-  }
-  
-  // Fall back to general fallback price if no daily price is available
-  fallbackExist = FallbackAssetPrice.isSet(tokenSymbol)
-  if ((!useOracle) && fallbackExist) {
-    let fallbackPrice = FallbackAssetPrice.get(tokenSymbol)
-    return BigDecimal.fromString(fallbackPrice ? fallbackPrice.toString() : '0')
-  }
+export function eth_getTokenUsdPrice(token: Token, block: ethereum.Block): BigDecimal {
+  let tokenOraclePriceConfig = new TokenOraclePriceConfig(token, block)
 
-  if ((!useOracle) && !fallbackExist) return BigDecimal.fromString('0')
+  if (!tokenOraclePriceConfig.useOracle || !tokenOraclePriceConfig.oracleAddress) {
+    if (tokenOraclePriceConfig.fallbackPrice !== null) {
+      return tokenOraclePriceConfig.fallbackPrice
+    } else {
+      return BIG_DECIMAL_ZERO
+    }
+  }
 
   // Use oracle if available
-  let oracleAddress = Address.fromString(oracleAddressString)
-  let oracleContract = AggregatorV3Interface.bind(oracleAddress)
+  let oracleContract = AggregatorV3Interface.bind(tokenOraclePriceConfig.oracleAddress)
   let answer = oracleContract.latestRoundData()
   let decimals = oracleContract.decimals()
-  let price = answer.value1
-
-  let usdValue = convertTokenToDecimal(price, BigInt.fromI32(decimals))
-
-  return usdValue
+  let price = convertTokenToDecimal(answer.value1, BigInt.fromI32(decimals))
+  return price
 }
 
-export function eth_getCoveAssetPrice(poolAddressBytes: Bytes, coveAddressBytes: Bytes, tokenAddressBytes: Bytes, decimals: i32, block: ethereum.Block): TypedMap<string, BigDecimal> {
+export function eth_getCoveAssetPrice(
+  poolAddressBytes: Bytes,
+  coveAddressBytes: Bytes,
+  tokenAddressBytes: Bytes,
+  decimals: i32,
+  block: ethereum.Block,
+): TypedMap<string, BigDecimal> {
   let poolAddress = Address.fromBytes(poolAddressBytes)
   let coveAddress = Address.fromBytes(coveAddressBytes)
   let tokenAddress = Address.fromBytes(tokenAddressBytes)
@@ -71,8 +111,8 @@ export function eth_getCoveAssetPrice(poolAddressBytes: Bytes, coveAddressBytes:
 
   let pool = loadPool(poolAddress, block)
   // gets the USD liquidity in our current pool
-  let currentPoolLiquidity = eth_getPoolTokensLiquidity(poolAddress, pool.tokens.load(), block)
-  let poolTokenSupply = eth_getPoolTokenSupply(poolAddress)
+  let currentPoolLiquidity = pool.poolValueUSD
+  let poolTokenSupply = pool.poolTokensSupply
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
 
   let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)

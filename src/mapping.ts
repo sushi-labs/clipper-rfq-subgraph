@@ -18,17 +18,17 @@ import {
   loadToken,
   loadTransactionSource,
 } from './utils'
-import { eth_getPoolTokensLiquidity, eth_getPoolTokenSupply } from './utils/pool'
-import { eth_getUsdPrice } from './utils/prices'
+import { eth_getPoolAllTokensBalance, eth_updatePoolTokensLiquidity } from './utils/pool'
+import { eth_getTokenUsdPrice } from './utils/prices'
 import { eth_fetchBigIntTokenBalance, eth_fetchTokenBalance } from './utils/token'
 import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
 
 export function handleDeposited(event: Deposited): void {
   let pool = loadPool(event.address, event.block)
   let timestamp = event.block.timestamp
-  let tokens = pool.tokens.load()
-  let currentPoolLiquidity = eth_getPoolTokensLiquidity(event.address, tokens, event.block)
-  let poolTokenSupply = eth_getPoolTokenSupply(pool.id)
+  let allTokensBalance = eth_getPoolAllTokensBalance(event.address)
+  let currentPoolLiquidity = eth_updatePoolTokensLiquidity(event.address, allTokensBalance, event.block)
+  let poolTokenSupply = allTokensBalance.value2
   let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
 
@@ -51,13 +51,14 @@ export function handleDeposited(event: Deposited): void {
   pool.poolTokensSupply = poolTokenSupply
   pool.depositCount = pool.depositCount.plus(BIG_INT_ONE)
   pool.depositedUSD = pool.depositedUSD.plus(usdProportion)
+  pool.poolValueUSD = currentPoolLiquidity
 
   let poolEvent = new PoolEvent(0)
   poolEvent.timestamp = timestamp.toI32();
   poolEvent.pool = pool.id
   poolEvent.type = DEPOSIT_EVENT
   poolEvent.amountUSD = usdProportion
-  poolEvent.poolValue = currentPoolLiquidity
+  poolEvent.poolValueUSD = currentPoolLiquidity
   poolEvent.poolTokensSupply = poolTokenSupply
 
   poolEvent.save()
@@ -67,10 +68,9 @@ export function handleDeposited(event: Deposited): void {
 
 function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Bytes): void {
   let pool = loadPool(event.address, event.block)
-  let tokens = pool.tokens.load()
-  let currentPoolLiquidity = eth_getPoolTokensLiquidity(event.address, tokens, event.block)
-  let poolTokenSupply = eth_getPoolTokenSupply(pool.id)
-
+  let allTokensBalance = eth_getPoolAllTokensBalance(event.address)
+  let currentPoolLiquidity = eth_updatePoolTokensLiquidity(event.address, allTokensBalance, event.block)
+  let poolTokenSupply = pool.poolTokensSupply.minus(poolTokensWithdrawn)
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
   let burntPoolTokens = convertTokenToDecimal(poolTokensWithdrawn, BigInt.fromI32(18))
 
@@ -89,12 +89,13 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   poolEvent.pool = pool.id
   poolEvent.type = WITHDRAWAL_EVENT
   poolEvent.amountUSD = usdProportion
-  poolEvent.poolValue = currentPoolLiquidity
+  poolEvent.poolValueUSD = currentPoolLiquidity
   poolEvent.poolTokensSupply = poolTokenSupply
 
   pool.poolTokensSupply = poolTokenSupply
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
   pool.withdrewUSD = pool.withdrewUSD.plus(usdProportion)
+  pool.poolValueUSD = currentPoolLiquidity
 
   poolEvent.save()
   newWithdrawal.save()
@@ -113,6 +114,7 @@ export function handleSwapped(event: Swapped): void {
   let poolAddress = event.address
   // Load pool first to ensure pool tokens are loaded
   let pool = loadPool(event.address, event.block)
+  let poolTokensSupply = pool.poolTokensSupply
 
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
@@ -120,8 +122,8 @@ export function handleSwapped(event: Swapped): void {
   let poolOutAsset = loadPoolToken(poolAddress, outAsset)
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
   let amountOut = convertTokenToDecimal(event.params.outAmount, outAsset.decimals)
-  let inputPrice = eth_getUsdPrice(inAsset.symbol, event.block)
-  let outputPrice = eth_getUsdPrice(outAsset.symbol, event.block)
+  let inputPrice = eth_getTokenUsdPrice(inAsset, event.block)
+  let outputPrice = eth_getTokenUsdPrice(outAsset, event.block)
   let amountInUsd = inputPrice.times(amountIn)
   let amountOutUsd = outputPrice.times(amountOut)
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
@@ -229,6 +231,10 @@ export function handleSwapped(event: Swapped): void {
   pool.revenueUSD = pool.revenueUSD.plus(revenueUSD)
   swap.revenueUSD = revenueUSD
 
+  let allTokensBalance = eth_getPoolAllTokensBalance(poolAddress)
+  let currentPoolLiquidity = eth_updatePoolTokensLiquidity(poolAddress, allTokensBalance, event.block)
+  pool.poolValueUSD = currentPoolLiquidity
+
   let poolEvent = new PoolEvent(0)
   poolEvent.timestamp = event.block.timestamp.toI32();
   poolEvent.pool = poolAddress
@@ -236,7 +242,7 @@ export function handleSwapped(event: Swapped): void {
   poolEvent.swapFeeUSD = feeUSD
   poolEvent.swapRevenueUSD = revenueUSD
   poolEvent.swapVolumeUSD = transactionVolume
-  poolEvent.poolValue = eth_getPoolTokensLiquidity(poolAddress, pool.tokens.load(), event.block)
+  poolEvent.poolValueUSD = currentPoolLiquidity
   poolEvent.poolTokensSupply = poolTokensSupply
 
   pool.save()

@@ -26,6 +26,9 @@ type Pool @entity(immutable: false) {
   # all time withdrew amount in USD
   withdrewUSD: BigDecimal!
 
+  # current pool liquidity in USD
+  poolValueUSD: BigDecimal!
+
   # number of all time unique users
   uniqueUsers: BigInt!
   # number of pool tokens supplied by the smart contract (used for time-travel queries)
@@ -62,7 +65,7 @@ type PoolEvent @entity(timeseries: true) {
   # Amount deposited or withdrawn (USD) - only for DEPOSIT/WITHDRAWAL events
   amountUSD: BigDecimal
   # Snapshot of pool liquidity value at the time of the event
-  poolValue: BigDecimal!
+  poolValueUSD: BigDecimal!
   # Snapshot of pool token supply at the time of the event
   poolTokensSupply: BigInt!
 }
@@ -96,11 +99,11 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
   # Total withdrawn amount (USD) in the interval
   withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
   # First recorded pool liquidity value in the interval
-  initialPoolValue: BigDecimal! @aggregate(fn: "first", arg: "poolValue")
+  initialpoolValueUSD: BigDecimal! @aggregate(fn: "first", arg: "poolValueUSD")
   # First recorded pool token supply in the interval
   initialPoolTokensSupply: BigInt! @aggregate(fn: "first", arg: "poolTokensSupply")
   # Last recorded pool liquidity value in the interval
-  poolValue: BigDecimal! @aggregate(fn: "last", arg: "poolValue")
+  poolValueUSD: BigDecimal! @aggregate(fn: "last", arg: "poolValueUSD")
   # Last recorded pool token supply in the interval
   poolTokensSupply: BigInt! @aggregate(fn: "last", arg: "poolTokensSupply")
   # Revenue made by clipper fee split (USD)
