@@ -38,7 +38,7 @@ export function loadTransactionSource(auxData: Bytes): TransactionSource {
 }
 
 export function loadPoolTransactionSource(poolAddress: Bytes, txSourceId: string): PoolTransactionSource {
-  let poolTxSourceId = poolAddress.toHex().concat(txSourceId)
+  let poolTxSourceId = poolAddress.toHex().concat('-').concat(txSourceId)
   let poolTxSource = PoolTransactionSource.load(poolTxSourceId)
   if (!poolTxSource) {
     poolTxSource = new PoolTransactionSource(poolTxSourceId)
@@ -52,7 +52,7 @@ export function loadPoolTransactionSource(poolAddress: Bytes, txSourceId: string
 }
 
 export function loadCoveTransactionSource(coveAddress: Bytes, txSourceId: string): CoveTransactionSource {
-  let coveTxSourceId = coveAddress.toHex().concat(txSourceId)
+  let coveTxSourceId = coveAddress.toHex().concat('-').concat(txSourceId)
   let coveTxSource = CoveTransactionSource.load(coveTxSourceId)
   if (!coveTxSource) {
     coveTxSource = new CoveTransactionSource(coveTxSourceId)
@@ -83,7 +83,7 @@ export function loadToken(tokenAddressBytes: Bytes): Token {
     token.save()
   }
 
-  return token as Token
+  return token
 }
 
 function getPoolTokenId(poolAddress: Bytes, token: Token): Bytes {

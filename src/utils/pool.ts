@@ -41,7 +41,7 @@ export function getPoolTokensLiquidity(poolAddress: Address, poolTokens: PoolTok
     const usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
     currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
     poolToken.tvl = tokenBalance
-    poolToken.tvlUSD = tokenUsdPrice
+    poolToken.tvlUSD = tokenUsdPrice.times(tokenBalance)
     poolToken.save()
   }
 

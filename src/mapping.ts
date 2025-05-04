@@ -113,6 +113,9 @@ export function handleSingleAssetWithdrawn(event: AssetWithdrawn): void {
 
 export function handleSwapped(event: Swapped): void {
   let poolAddress = event.address
+  // Load pool first to ensure pool tokens are loaded
+  let pool = loadPool(event.address, event.block)
+
   let inAsset = loadToken(event.params.inAsset)
   let outAsset = loadToken(event.params.outAsset)
   let poolInAsset = loadPoolToken(poolAddress, inAsset)
@@ -218,7 +221,6 @@ export function handleSwapped(event: Swapped): void {
     : BigDecimal.fromString('0.5')
   let revenueUSD = feeUSD.times(theFraction).times(daoRevenueFraction)
 
-  let pool = loadPool(event.address, event.block)
   pool.txCount = pool.txCount.plus(BIG_INT_ONE)
   pool.volumeUSD = pool.volumeUSD.plus(transactionVolume)
   pool.avgTrade = pool.volumeUSD.div(pool.txCount.toBigDecimal())
@@ -234,6 +236,7 @@ export function handleSwapped(event: Swapped): void {
   }
 
   pool.revenueUSD = pool.revenueUSD.plus(revenueUSD)
+  swap.revenueUSD = revenueUSD
 
   let poolEvent = new PoolEvent(0)
   poolEvent.timestamp = event.block.timestamp.toI32();

@@ -1,7 +1,7 @@
 import { Address, BigDecimal, Bytes } from '@graphprotocol/graph-ts'
 import { CoveDeposited, CoveSwapped, CoveWithdrawn } from '../types/templates/ClipperCove/ClipperCove'
 import { Cove, CoveDeposit, CoveEvent, CoveWithdrawal, Swap } from '../types/schema'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, WITHDRAWAL_EVENT } from './constants'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
 import {
   loadCoveParent,
   loadCove,
@@ -54,7 +54,7 @@ export function handleCoveDeposited(event: CoveDeposited): void {
   let coveEvent = new CoveEvent(0)
   coveEvent.cove = cove.id
   coveEvent.coveParent = coveParent.id
-  coveEvent.type = 'DEPOSIT'
+  coveEvent.type = DEPOSIT_EVENT
   coveEvent.amountUSD = estimatedUsdDepositValue
   coveEvent.timestamp = event.block.timestamp.toI32()
   coveEvent.covePrice = covePrice
@@ -156,6 +156,8 @@ export function handleCoveSwapped(event: CoveSwapped): void {
 
   let feeUSD = amountInUsd.minus(amountOutUsd).lt(BIG_DECIMAL_ZERO) ? BIG_DECIMAL_ZERO : amountInUsd.minus(amountOutUsd)
   swap.feeUSD = feeUSD
+  // No revenue for cove swaps
+  swap.revenueUSD = BIG_DECIMAL_ZERO
 
   outAsset.txCount = outAsset.txCount.plus(BIG_INT_ONE)
   outAsset.volume = outAsset.volume.plus(outAmount)
@@ -202,8 +204,8 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     let coveEvent = new CoveEvent(0)
     coveEvent.cove = inAssetCove.id
     coveEvent.coveParent = coveParent.id
-    coveEvent.type = DEPOSIT_EVENT
-    coveEvent.amountUSD = addedVolume
+    coveEvent.type = SWAP_EVENT
+    coveEvent.swapVolumeUSD = addedVolume
     coveEvent.timestamp = event.block.timestamp.toI32()
     coveEvent.covePrice = outputPrice
 
@@ -231,8 +233,8 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     let coveEvent = new CoveEvent(0)
     coveEvent.cove = outAssetCove.id
     coveEvent.coveParent = coveParent.id
-    coveEvent.type = DEPOSIT_EVENT
-    coveEvent.amountUSD = addedVolume
+    coveEvent.type = SWAP_EVENT
+    coveEvent.swapVolumeUSD = addedVolume
     coveEvent.timestamp = event.block.timestamp.toI32()
     coveEvent.covePrice = outputPrice
 
