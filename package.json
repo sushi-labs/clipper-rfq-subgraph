@@ -13,10 +13,10 @@
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:optimism": "graph deploy clipper-optimism",
-    "deploy:moonbeam": "graph deploy --node https://api.thegraph.com/deploy/ edoapp/clipper-moonbeam --debug",
+    "deploy:moonbeam": "graph deploy clipper-moonbeam",
     "deploy:ethereum": "graph deploy clipper-mainnet",
     "deploy:arbitrum": "graph deploy clipper-arbitrum",
-    "deploy:base": "graph deploy --studio cllipper-base"
+    "deploy:base": "graph deploy clipper-base"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.97.0",
