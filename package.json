@@ -10,10 +10,12 @@
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
     "pre:codegen:base": "rimraf types && yarn script template --deployment base",
+    "pre:codegen:mantle": "rimraf types && yarn script template --deployment mantle",
     "codegen": "graph codegen --output-dir ./types",
     "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:optimism": "graph deploy clipper-optimism",
     "deploy:moonbeam": "graph deploy clipper-moonbeam",
+    "deploy:mantle": "goldsky subgraph deploy blade/v1-mantle --path .",
     "deploy:ethereum": "graph deploy clipper-mainnet",
     "deploy:arbitrum": "graph deploy clipper-arbitrum",
     "deploy:base": "graph deploy clipper-base"

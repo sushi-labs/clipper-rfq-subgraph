@@ -333,6 +333,38 @@ async function fetchDeployment(source: string): Promise<Deployment> {
     }
   }
 
+  if (source === 'mantle') {
+    return {
+      ...commonConfig,
+      networkName: 'mantle',
+
+      pools: [
+        {
+          address: '0x769728b5298445BA2828c0f3F5384227fbF590C5',
+          startBlock: 5192720,
+          permitRouter: '0x98898Bc1975e369345519b6C11c9A1F8A37AB877',
+        },
+      ],
+
+      addressZeroMap: {
+        symbol: 'MNT',
+        decimals: 18,
+        name: 'Mantle',
+        address: '0x0000000000000000000000000000000000000000',
+      },
+
+      prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
+
+      priceOracles: [
+        { symbol: 'WETH', address: '0x5bc7Cf88EB131DB18b5d7930e793095140799aD5' },
+        { symbol: 'WBTC', address: '0x7db2275279F52D0914A481e14c4Ce5a59705A25b' },
+        { symbol: 'USDC', address: '0x22b422CECb0D4Bd5afF3EA999b048FA17F5263bD' },
+        { symbol: 'USDT', address: '0xd86048D5e4fe96157CE03Ae519A9045bEDaa6551' },
+        { symbol: 'WMNT', address: '0xD97F20bEbeD74e8144134C4b148fE93417dd0F96' },
+      ],
+    }
+  }
+
   throw new Error('Unsupported deployment')
 }
 
