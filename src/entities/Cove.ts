@@ -2,10 +2,11 @@ import { Address, Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { Cove, CoveParent, UserCoveStake } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { loadToken } from '../utils'
-import { loadPool } from './Pool'
 import { eth_getCovePoolAddress } from '../utils/cove'
+import { PoolHelpers } from '../utils/pool'
 
 export function loadCove(
+  poolContractAbiName: string,
   coveParentAddressBytes: Bytes,
   tokenAddress: Bytes,
   creator: Bytes,
@@ -20,7 +21,8 @@ export function loadCove(
   if (!cove) {
     let coveAsset = loadToken(tokenAddress, block)
     let poolAddress = eth_getCovePoolAddress(coveParentAddress)
-    let pool = loadPool(poolAddress, block)
+    let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, block)
+    let pool = poolHelpers.loadPool()
 
     cove = new Cove(id)
     cove.pool = pool.id
@@ -69,14 +71,15 @@ export function loadUserCoveStake(coveAddress: Bytes, userWallet: Bytes): UserCo
   return stake as UserCoveStake
 }
 
-export function loadCoveParent(coveParentAddressBytes: Bytes, block: ethereum.Block): CoveParent {
+export function loadCoveParent(poolContractAbiName: string, coveParentAddressBytes: Bytes, block: ethereum.Block): CoveParent {
   let coveParentAddress = Address.fromBytes(coveParentAddressBytes)
   let parent = CoveParent.load(coveParentAddress)
 
   if (!parent) {
     parent = new CoveParent(coveParentAddress)
     let poolAddress = eth_getCovePoolAddress(coveParentAddress)
-    let pool = loadPool(poolAddress, block)
+    let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, block)
+    let pool = poolHelpers.loadPool()
     parent.pool = pool.id
     parent.createdAt = block.timestamp.toI32()
     parent.txCount = 0

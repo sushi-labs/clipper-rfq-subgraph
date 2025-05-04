@@ -2,10 +2,9 @@ import { Address, BigInt } from "@graphprotocol/graph-ts"
 import { AnswerUpdated } from "../types/templates/PriceOracle/AggregatorV3Interface"
 import { TokenByOracle } from "./addresses"
 import { convertTokenToDecimal, loadToken } from "./utils"
-import { loadPool } from "./entities/Pool"
-import { PoolEvent } from "../types/schema"
+import { Pool, PoolEvent } from "../types/schema"
 import { ORACLE_PRICE_SOURCE, ORACLE_UPDATE_EVENT } from "./constants"
-import { updateExistingPoolTokensLiquidity } from "./utils/pool"
+import { PoolHelpers } from "./utils/pool"
 
 export function handlePriceUpdated(event: AnswerUpdated): void {
     let tokenAddress = TokenByOracle.get(event.address)
@@ -26,8 +25,12 @@ export function handlePriceUpdated(event: AnswerUpdated): void {
     for (let i = 0; i < poolTokens.length; i++) {
       let poolToken = poolTokens[i]
       let poolAddress = Address.fromBytes(poolToken.pool)
-      let poolValueUSD = updateExistingPoolTokensLiquidity(poolAddress, event.block)
-      let pool = loadPool(poolAddress, event.block)
+      let pool = Pool.load(poolAddress)
+      if (!pool) {
+        continue
+      }
+      let poolHelpers = new PoolHelpers(poolAddress, pool.abi, event.block)
+      let poolValueUSD = poolHelpers.updateExistingPoolTokensLiquidity()
       pool.poolValueUSD = poolValueUSD
       pool.save()
 

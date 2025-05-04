@@ -6,6 +6,8 @@ enum SwapType {
 type Pool @entity(immutable: false) {
   # pool address
   id: Bytes!
+  # abi name
+  abi: String!
   createdAt: Timestamp!
   # all time USD swapped
   volumeUSD: BigDecimal!

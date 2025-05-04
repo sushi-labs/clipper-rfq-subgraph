@@ -1,15 +1,13 @@
-import { Address, BigDecimal, BigInt, Bytes, ethereum, log, TypedMap } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from './index'
-import { AggregatorV3Interface } from '../../types/templates/ClipperDirectExchange/AggregatorV3Interface'
+import { AggregatorV3Interface } from '../../types/templates/ClipperCommonExchangeV0/AggregatorV3Interface'
 import {
   FallbackAssetPrice,
   DailyFallbackPrices,
   PriceOracleByToken,
   OracleStartBlocks,
 } from '../addresses'
-import { BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN, ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
-import { eth_getCoveBalances } from './cove'
-import { loadPool } from '../entities/Pool'
+import { BIG_DECIMAL_ZERO, ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
 import { getOpenTime } from './time'
 import { Token } from '../../types/schema'
 
@@ -121,47 +119,4 @@ export function getTokenUsdPrice(token: Token, block: ethereum.Block): TokenPric
   }
 
   return tokenPrice
-}
-
-export function eth_getCoveAssetPrice(
-  poolAddressBytes: Bytes,
-  coveAddressBytes: Bytes,
-  tokenAddressBytes: Bytes,
-  decimals: i32,
-  block: ethereum.Block,
-): TypedMap<string, BigDecimal> {
-  let poolAddress = Address.fromBytes(poolAddressBytes)
-  let coveAddress = Address.fromBytes(coveAddressBytes)
-  let tokenAddress = Address.fromBytes(tokenAddressBytes)
-  let balances = eth_getCoveBalances(coveAddress, tokenAddress, decimals)
-  let poolTokensAmount = balances[0]
-  let longtailAssetBalance = balances[1]
-
-  let pool = loadPool(poolAddress, block)
-  // gets the USD liquidity in our current pool
-  let currentPoolLiquidity = pool.poolValueUSD
-  let poolTokenSupply = pool.poolTokensSupply
-  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
-
-  let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)
-
-  // usd amount of pool tokens owned by the cove.
-  let usdProportion = currentPoolLiquidity.times(covePoolTokenProportion)
-
-  // multiply by two since the amount of longtail assets should be approx the same, in usd value as the pool tokens added
-  let coveLiquidity = usdProportion.times(BigDecimal.fromString('2'))
-  let assetPrice = longtailAssetBalance.le(BIG_DECIMAL_ZERO)
-    ? BIG_DECIMAL_ZERO
-    : usdProportion.div(longtailAssetBalance)
-
-  let returnValue = new TypedMap<string, BigDecimal>()
-  returnValue.set('coveLiquidity', coveLiquidity)
-  returnValue.set('assetPrice', assetPrice)
-  returnValue.set('assetBalance', longtailAssetBalance)
-  returnValue.set('poolTokenBalance', poolTokensAmount)
-  returnValue.set('longtailAssetBalance', longtailAssetBalance)
-  returnValue.set('totalPoolTokens', totalPoolTokens)
-  returnValue.set('currentPoolLiquidity', currentPoolLiquidity)
-
-  return returnValue
 }

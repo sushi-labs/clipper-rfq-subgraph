@@ -1,6 +1,6 @@
 import { Address, BigDecimal, BigInt, Bytes, log } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
-import { ERC20 } from '../../types/templates/ClipperDirectExchange/ERC20'
+import { ERC20 } from '../../types/templates/ClipperCommonExchangeV0/ERC20'
 import { Token } from '../../types/schema'
 import { AddressZeroName, AddressZeroSymbol } from '../addresses'
 import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
