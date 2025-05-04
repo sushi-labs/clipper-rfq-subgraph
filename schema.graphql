@@ -9,20 +9,13 @@ type Pool @entity(immutable: false) {
   createdAt: Timestamp!
   # all time USD swapped
   volumeUSD: BigDecimal!
-  # Average trade amount of all time in USD
-  avgTrade: BigDecimal!
   # all time number of transactions
   txCount: BigInt!
   # all time fee collected in USD
   feeUSD: BigDecimal!
-  # Average trade fee of all time in USD
-  avgTradeFee: BigDecimal
-  avgFeeInBps: BigDecimal!
 
   # all time deposits count
   depositCount: BigInt!
-  # Average deposit amount of all time in USD
-  avgDeposit: BigDecimal!
   # all time deposited amount in USD
   depositedUSD: BigDecimal!
   # total revenue made by clipper fee split
@@ -30,8 +23,6 @@ type Pool @entity(immutable: false) {
 
   # all time withdrawals count
   withdrawalCount: BigInt!
-  # Average withdrawal amount of all time in USD
-  avgWithdraw: BigDecimal!
   # all time withdrew amount in USD
   withdrewUSD: BigDecimal!
 

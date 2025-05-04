@@ -51,7 +51,6 @@ export function handleDeposited(event: Deposited): void {
   pool.poolTokensSupply = poolTokenSupply
   pool.depositCount = pool.depositCount.plus(BIG_INT_ONE)
   pool.depositedUSD = pool.depositedUSD.plus(usdProportion)
-  pool.avgDeposit = pool.depositedUSD.div(pool.depositCount.toBigDecimal())
 
   let poolEvent = new PoolEvent(0)
   poolEvent.timestamp = timestamp.toI32();
@@ -96,7 +95,6 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   pool.poolTokensSupply = poolTokenSupply
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
   pool.withdrewUSD = pool.withdrewUSD.plus(usdProportion)
-  pool.avgDeposit = pool.withdrewUSD.div(pool.withdrawalCount.toBigDecimal())
 
   poolEvent.save()
   newWithdrawal.save()
@@ -223,13 +221,7 @@ export function handleSwapped(event: Swapped): void {
 
   pool.txCount = pool.txCount.plus(BIG_INT_ONE)
   pool.volumeUSD = pool.volumeUSD.plus(transactionVolume)
-  pool.avgTrade = pool.volumeUSD.div(pool.txCount.toBigDecimal())
   pool.feeUSD = pool.feeUSD.plus(feeUSD)
-  pool.avgTradeFee = pool.feeUSD.div(pool.txCount.toBigDecimal())
-  pool.avgFeeInBps = pool.feeUSD
-    .div(pool.volumeUSD)
-    .times(BigDecimal.fromString('100'))
-    .times(BigDecimal.fromString('100'))
 
   if (isUniqueUser) {
     pool.uniqueUsers = pool.uniqueUsers.plus(BIG_INT_ONE)
