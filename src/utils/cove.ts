@@ -17,6 +17,12 @@ export function getCoveBalances(coveParentAddress: Address, tokenAddress: Addres
   return [poolTokens, assetBalance]
 }
 
+/**
+ * Get the pool address from the cove parent address.
+ * Only used when creating a cove entity. Cached in Cove entities.
+ * @param coveParentAddress - The address of the cove contract
+ * @returns The address of the pool
+ */
 export function getCovePoolAddress(coveParentAddress: Address): Address {
   let coveContract = ClipperCove.bind(coveParentAddress)
   let poolAddress = coveContract.CLIPPER_EXCHANGE()
@@ -24,4 +30,3 @@ export function getCovePoolAddress(coveParentAddress: Address): Address {
   return poolAddress
 }
 
-// export function get

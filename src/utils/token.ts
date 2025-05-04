@@ -5,6 +5,12 @@ import { Token } from '../../types/schema'
 import { AddressZeroName, AddressZeroSymbol } from '../addresses'
 import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
+/**
+ * Fetch the symbol of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The symbol of the token
+ */
 export function fetchTokenSymbol(tokenAddress: Address): string {
   let contract = ERC20.bind(tokenAddress)
 
@@ -22,6 +28,12 @@ export function fetchTokenSymbol(tokenAddress: Address): string {
   return symbolValue
 }
 
+/**
+ * Fetch the decimals of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The decimals of the token
+ */
 export function fetchTokenDecimals(tokenAddress: Address): BigInt {
   let contract = ERC20.bind(tokenAddress)
   // try types uint8 for decimals
@@ -36,6 +48,12 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
   return BigInt.fromI32(decimalValue)
 }
 
+/**
+ * Fetch the name of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The name of the token
+ */
 export function fetchTokenName(tokenAddress: Address): string {
   if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
     return AddressZeroName

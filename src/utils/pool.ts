@@ -6,6 +6,13 @@ import { ClipperDirectExchange } from '../../types/templates/ClipperDirectExchan
 import { PoolToken } from '../../types/schema'
 import { BIG_DECIMAL_ZERO } from '../constants'
 
+/**
+ * Load or create pool tokens.
+ * Only used when creating a pool entity. Cached in Pool entities.
+ * @param poolAddress - The address of the pool
+ * @param block - The block number
+ * @returns An array of pool tokens
+ */
 export function loadOrCreatePoolTokens(poolAddress: Bytes, block: ethereum.Block): PoolToken[] {
   let poolContract = ClipperDirectExchange.bind(Address.fromBytes(poolAddress))
   let nTokens = poolContract.nTokens()

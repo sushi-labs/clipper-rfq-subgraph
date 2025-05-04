@@ -18,7 +18,7 @@ import {
   loadToken,
   loadTransactionSource,
 } from './utils'
-import { getPoolTokensLiquidity, getPoolTokenSupply, loadOrCreatePoolTokens } from './utils/pool'
+import { getPoolTokensLiquidity, getPoolTokenSupply } from './utils/pool'
 import { getUsdPrice } from './utils/prices'
 import { fetchBigIntTokenBalance, fetchTokenBalance } from './utils/token'
 import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
@@ -26,7 +26,7 @@ import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitR
 export function handleDeposited(event: Deposited): void {
   let pool = loadPool(event.address, event.block)
   let timestamp = event.block.timestamp
-  let tokens = loadOrCreatePoolTokens(pool.id, event.block)
+  let tokens = pool.tokens.load()
   let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
   let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
@@ -68,7 +68,7 @@ export function handleDeposited(event: Deposited): void {
 
 function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt, withdrawer: Bytes): void {
   let pool = loadPool(event.address, event.block)
-  let tokens = loadOrCreatePoolTokens(pool.id, event.block)
+  let tokens = pool.tokens.load()
   let currentPoolLiquidity = getPoolTokensLiquidity(event.address, tokens)
   let poolTokenSupply = getPoolTokenSupply(pool.id)
 
