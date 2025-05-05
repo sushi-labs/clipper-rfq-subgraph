@@ -1,6 +1,7 @@
 import { Address, createPublicClient, http, erc20Abi } from 'viem'
 import { Deployment, networkChainMap } from './config'
 import { clipperDirectExchangeAbi } from '../../ts-abis/ClipperDirectExchange'
+import { TokenMap } from './manifest'
 
 // Helper function to validate unique addresses in a config array
 export function validateUniqueAddresses(addresses: string[], type: string) {
@@ -17,14 +18,13 @@ export function validateUniqueAddresses(addresses: string[], type: string) {
 // Modify validatePoolTokenPrices signature and return type
 export async function validatePoolTokenPrices(
   deployment: Deployment,
-): Promise<{ deployment: Deployment; symbolToAddresses: Map<string, string[]> }> {
+): Promise<{ deployment: Deployment; tokenMap: TokenMap }> {
   // Return symbol map
   console.log(`Validating token pricing for network: ${deployment.networkName}...`)
 
   const networkConfig = networkChainMap[deployment.networkName]
   if (!networkConfig) {
-    console.warn(`Skipping price validation: Unsupported network ${deployment.networkName} for viem client.`)
-    return { deployment, symbolToAddresses: new Map<string, string[]>() }
+    throw new Error(`Unsupported network ${deployment.networkName} for viem client.`)
   }
 
   const client = createPublicClient({
@@ -34,14 +34,7 @@ export async function validatePoolTokenPrices(
 
   // First collect all unique tokens across all pools
   console.log(`Collecting unique tokens from all pools...`)
-  const tokenMap = new Map<
-    string, // token address
-    {
-      address: Address
-      poolAddresses: string[]
-      symbol?: string // Optional symbol for logging purposes only
-    }
-  >()
+  const tokenMap: TokenMap = new Map()
 
   for (const pool of deployment.pools) {
     console.log(`  Scanning pool: ${pool.address}`)
@@ -91,7 +84,7 @@ export async function validatePoolTokenPrices(
   for (const [normalizedAddress, tokenInfo] of tokenMap) {
     try {
       const symbol = (await client.readContract({
-        address: tokenInfo.address,
+        address: tokenInfo.address as Address,
         abi: erc20Abi,
         functionName: 'symbol',
       })) as string
@@ -318,5 +311,5 @@ export async function validatePoolTokenPrices(
   }
 
   // Return the original deployment and the symbol map
-  return { deployment, symbolToAddresses }
+  return { deployment, tokenMap }
 }

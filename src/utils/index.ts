@@ -82,9 +82,11 @@ export function loadToken(tokenAddressBytes: Bytes, block: ethereum.Block): Toke
     token.deposited = BIG_DECIMAL_ZERO
     token.depositedUSD = BIG_DECIMAL_ZERO
     let tokenPrice = eth_getTokenUsdPrice(token, block)
-    token.priceUSD = tokenPrice.priceUSD
-    token.priceSource = tokenPrice.priceSource
-    token.priceUpdatedAt = block.timestamp.toI32()
+    if (tokenPrice) {
+      token.priceUSD = tokenPrice.priceUSD
+      token.priceSource = tokenPrice.priceSource
+      token.priceUpdatedAt = block.timestamp.toI32()
+    }
     token.save()
   }
 

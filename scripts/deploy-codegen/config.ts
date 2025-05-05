@@ -65,9 +65,9 @@ export const networkChainMap: Record<string, { chain: Chain; rpcUrl?: string }> 
   'polygon-zkevm': { chain: chains.polygonZkEvm },
 }
 
-export type SubgraphsManifestDeploymentBase = Omit<Deployment, 'pools'> & {
-  poolsBySourceAbi: Record<PoolSourceAbi, PoolConfig[]>;
-  priceOracles: (PriceOracleConfig & { indexingStartBlock: number })[]
+export type SubgraphsManifestDeploymentBase = Omit<Deployment, 'pools' | 'priceOracles'> & {
+  poolsBySourceAbi: Record<PoolSourceAbi, PoolConfig[]>
+  priceOracles: (Omit<PriceOracleConfig, 'tokens'> & { token: string; indexingStartBlock: number })[]
   // Add daily fallback prices
   dailyFallbackPrices?: {
     [tokenAddress: string]: {

@@ -1,7 +1,7 @@
 import { Address, BigDecimal, Bytes, dataSource } from '@graphprotocol/graph-ts'
 import { CoveDeposited, CoveSwapped, CoveWithdrawn } from '../types/templates/ClipperCove/ClipperCove'
 import { Cove, CoveDeposit, CoveEvent, CoveWithdrawal, Swap } from '../types/schema'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, COVE_PRICE_SOURCE, DEPOSIT_EVENT, SNAPSHOT_PRICE_SOURCE, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
 import {
   loadCoveParent,
   loadCove,
@@ -112,6 +112,13 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     inTokenBalance = coveAssetPrice.get('assetBalance') as BigDecimal
     inCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
     inCoveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal
+    // If the price source is not oracle, we want to update the token price to the cove price
+    if (inAsset.priceSource === null || inAsset.priceSource === COVE_PRICE_SOURCE || inAsset.priceSource === SNAPSHOT_PRICE_SOURCE) {
+      inAsset.priceUSD = inputPrice
+      inAsset.priceSource = COVE_PRICE_SOURCE
+      inAsset.priceUpdatedAt = event.block.timestamp.toI32()
+      inAsset.save()
+    }
   }
 
   if (!shorttailAssetMap.has(outAsset.id)) {
@@ -121,15 +128,32 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     outTokenBalance = coveAssetPrice.get('assetBalance') as BigDecimal
     outCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
     outCoveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal
+    // If the price source is not oracle, we want to update the token price to the cove price
+    if (outAsset.priceSource === null || outAsset.priceSource === COVE_PRICE_SOURCE || outAsset.priceSource === SNAPSHOT_PRICE_SOURCE) {
+      outAsset.priceUSD = outputPrice
+      outAsset.priceSource = COVE_PRICE_SOURCE
+      outAsset.priceUpdatedAt = event.block.timestamp.toI32()
+      outAsset.save()
+    }
   }
 
   for (let i = 0; i < allTokensBalance.value1.length; i++) {
     let tokenAddress = allTokensBalance.value1[i]
     if (tokenAddress.equals(inAsset.id) && !inAssetCove) {
-      inputPrice = getTokenUsdPrice(inAsset, event.block).priceUSD
+      let tokenPrice = getTokenUsdPrice(inAsset, event.block)
+      if (tokenPrice !== null) {
+        inputPrice = tokenPrice.priceUSD
+      } else {
+        inputPrice = BIG_DECIMAL_ZERO
+      }
       inTokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], inAsset.decimals)
     } else if (tokenAddress.equals(outAsset.id) && !outAssetCove) {
-      outputPrice = getTokenUsdPrice(outAsset, event.block).priceUSD
+      let tokenPrice = getTokenUsdPrice(outAsset, event.block)
+      if (tokenPrice !== null) {
+        outputPrice = tokenPrice.priceUSD
+      } else {
+        outputPrice = BIG_DECIMAL_ZERO
+      }
       outTokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], outAsset.decimals)
     }
   }

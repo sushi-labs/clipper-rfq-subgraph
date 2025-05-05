@@ -19,11 +19,18 @@ interface Mapping {
   language: string
   entities: string[]
   abis: AbiDefinition[]
-  eventHandlers: EventHandler[]
+  eventHandlers?: EventHandler[]
+  blockHandlers?: BlockHandler[]
   file: string // Relative path to the mapping file
   // callHandlers?: CallHandler[]; // Add if needed
 }
 
+interface BlockHandler {
+  handler: string
+  filter: {
+    kind: string
+  }
+}
 interface EventHandler {
   event: string // Signature
   handler: string // Function name
@@ -77,7 +84,12 @@ export interface ManifestGenConfig {
   priceOracles: PriceOracleConfig[]
 }
 
-export function transformDeploymentToManifestBase(deployment: Deployment): SubgraphsManifestDeploymentBase {
+export type TokenMap = Map<string, { symbol?: string; address: string; poolAddresses: string[] }>
+
+export function transformDeploymentToManifestBase(
+  deployment: Deployment,
+  tokenMap: TokenMap,
+): SubgraphsManifestDeploymentBase {
   // Group pools by sourceAbi
   const poolsBySourceAbi: Record<string, PoolConfig[]> = {}
   for (const pool of deployment.pools) {
@@ -91,15 +103,39 @@ export function transformDeploymentToManifestBase(deployment: Deployment): Subgr
   if (!firstPool) {
     throw new Error('No pools to deploy')
   }
-  const firstPoolBlock = deployment.pools
-    .slice(1)
-    .reduce((minBlock, pool) => Math.min(minBlock, pool.startBlock), firstPool.startBlock)
-  const priceOracles = deployment.priceOracles.map<PriceOracleConfig & { indexingStartBlock: number }>(oracle => {
-    return {
-      ...oracle,
-      indexingStartBlock: Math.max(oracle.startBlock, firstPoolBlock),
+
+  const priceOracles: SubgraphsManifestDeploymentBase['priceOracles'] = []
+
+  for (const oracle of deployment.priceOracles) {
+    for (const tokenAddress of oracle.tokens) {
+      const token = tokenMap.get(tokenAddress.toLowerCase())
+      if (!token) {
+        continue
+      }
+      let firstPoolBlock: number | undefined
+      for (const pool of token.poolAddresses) {
+        const poolConfig = deployment.pools.find(p => p.address === pool)
+        if (poolConfig) {
+          if (firstPoolBlock === undefined || poolConfig.startBlock < firstPoolBlock) {
+            firstPoolBlock = poolConfig.startBlock
+          }
+        }
+      }
+      if (firstPoolBlock === undefined) {
+        throw new Error(`No pools found for token ${tokenAddress}`)
+      }
+      const indexingStartBlock = Math.max(oracle.startBlock, firstPoolBlock)
+      const priceOracleConfig = {
+        address: oracle.address,
+        startBlock: oracle.startBlock,
+        contractAbiName: oracle.contractAbiName,
+        sourceAbi: oracle.sourceAbi,
+        token: token.address,
+        indexingStartBlock,
+      }
+      priceOracles.push(priceOracleConfig)
     }
-  })
+  }
 
   return {
     ...deployment,
@@ -109,41 +145,41 @@ export function transformDeploymentToManifestBase(deployment: Deployment): Subgr
 }
 
 const CLIPPER_POOL_ABIS: AbiDefinition[] = [
-  {
-    name: 'ClipperVerifiedExchange',
-    file: './abis/ClipperVerifiedExchange.json',
-  },
-  {
-    name: 'ClipperVerifiedCaravelExchange',
-    file: './abis/ClipperVerifiedCaravelExchange.json',
-  },
-  {
-    name: 'ClipperApproximateCaravelExchange',
-    file: './abis/ClipperApproximateCaravelExchange.json',
-  },
-  {
-    name: 'ClipperCaravelExchange',
-    file: './abis/ClipperCaravelExchange.json',
-  },
-  {
-    name: 'ClipperPackedOracleVerifiedExchange',
-    file: './abis/ClipperPackedOracleVerifiedExchange.json',
-  },
-  {
-    name: 'ClipperPackedExchange',
-    file: './abis/ClipperPackedExchange.json',
-  },
-  {
-    name: 'ClipperPackedVerifiedExchange',
-    file: './abis/ClipperPackedVerifiedExchange.json',
-  },
+  // {
+  //   name: 'ClipperVerifiedExchange',
+  //   file: './abis/ClipperVerifiedExchange.json',
+  // },
+  // {
+  //   name: 'ClipperVerifiedCaravelExchange',
+  //   file: './abis/ClipperVerifiedCaravelExchange.json',
+  // },
+  // {
+  //   name: 'ClipperApproximateCaravelExchange',
+  //   file: './abis/ClipperApproximateCaravelExchange.json',
+  // },
+  // {
+  //   name: 'ClipperCaravelExchange',
+  //   file: './abis/ClipperCaravelExchange.json',
+  // },
+  // {
+  //   name: 'ClipperPackedOracleVerifiedExchange',
+  //   file: './abis/ClipperPackedOracleVerifiedExchange.json',
+  // },
+  // {
+  //   name: 'ClipperPackedExchange',
+  //   file: './abis/ClipperPackedExchange.json',
+  // },
+  // {
+  //   name: 'ClipperPackedVerifiedExchange',
+  //   file: './abis/ClipperPackedVerifiedExchange.json',
+  // },
   {
     name: 'ClipperDirectExchangeV0',
     file: './abis/ClipperDirectExchangeV0.json',
   },
   // Default ClipperPool ABI
   {
-    name: 'ClipperPool',
+    name: 'ClipperDirectExchangeV1',
     file: './abis/ClipperDirectExchangeV1.json',
   },
 ]
@@ -190,28 +226,28 @@ const ClipperCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
         event: 'Deposited(indexed address,uint256,uint256)',
         handler: 'handleDeposited',
         calls: {
-          'ClipperDirectExchange.allTokensBalance': 'ClipperPool[event.address].allTokensBalance()',
+          'ClipperDirectExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'Withdrawn(indexed address,uint256,uint256)',
         handler: 'handleWithdrawn',
         calls: {
-          'ClipperDirectExchange.allTokensBalance': 'ClipperPool[event.address].allTokensBalance()',
+          'ClipperDirectExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'AssetWithdrawn(indexed address,uint256,indexed address,uint256)',
         handler: 'handleSingleAssetWithdrawn',
         calls: {
-          'ClipperDirectExchange.allTokensBalance': 'ClipperPool[event.address].allTokensBalance()',
+          'ClipperDirectExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)',
         handler: 'handleSwapped',
         calls: {
-          'ClipperDirectExchange.allTokensBalance': 'ClipperPool[event.address].allTokensBalance()',
+          'ClipperDirectExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
@@ -344,17 +380,19 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
   for (const sourceAbi of PoolSourceAbiSet.values()) {
     if (sourceAbi === 'ClipperCommonExchangeV0') {
       for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0) {
-        const eventHandlers = ClipperCommonExchangeV0Template.mapping.eventHandlers.flatMap(({ calls, ...handler }) => {
-          if (handler.handler === 'handleTransfer') {
-            return []
-          }
-          return [
-            {
-              ...handler,
-              ...(pool.contractAbiName !== 'ClipperDirectExchangeV0' ? { calls } : {}),
-            },
-          ]
-        })
+        const eventHandlers = (ClipperCommonExchangeV0Template.mapping.eventHandlers || []).flatMap(
+          ({ calls, ...handler }) => {
+            if (handler.handler === 'handleTransfer') {
+              return []
+            }
+            return [
+              {
+                ...handler,
+                ...(pool.contractAbiName !== 'ClipperDirectExchangeV0' ? { calls } : {}),
+              },
+            ]
+          },
+        )
         const abis = ClipperCommonExchangeV0Template.mapping.abis.filter(
           abi => !CLIPPER_POOL_ABIS.find(c => c.name === abi.name),
         )
@@ -372,13 +410,6 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
           },
           mapping: {
             ...ClipperCommonExchangeV0Template.mapping,
-            abis: [
-              {
-                name: 'ClipperPool',
-                file: `./abis/${pool.contractAbiName}.json`,
-              },
-              ...abis,
-            ],
             eventHandlers: [
               ...eventHandlers,
               {
@@ -408,27 +439,43 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
         startBlock: cove.startBlock,
       },
       context: {
-        //TODO: FIX
         poolContractAbiName: { type: 'String', data: cove.poolContractAbiName },
-      },
-      mapping: {
-        ...ClipperCoveTemplate.mapping,
       },
     })
   }
 
   for (const oracle of config.priceOracles) {
     dataSources.push({
-      ...PriceOracleTemplate,
-      name: `PriceOracle_${oracle.address}`,
+      kind: 'ethereum/contract',
+      name: `PriceOracleProxy_${oracle.token}`,
       network: config.networkName,
       source: {
-        abi: PriceOracleTemplate.source.abi,
+        abi: 'AggregatorV3Interface',
         address: oracle.address,
         startBlock: oracle.indexingStartBlock,
       },
+      context: {
+        proxyAddress: { type: 'String', data: oracle.address },
+        tokenAddress: { type: 'String', data: oracle.token },
+      },
       mapping: {
-        ...PriceOracleTemplate.mapping,
+        kind: 'ethereum/events',
+        apiVersion: '0.0.9',
+        language: 'wasm/assemblyscript',
+        entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent'],
+        abis: PriceOracleTemplate.mapping.abis,
+        blockHandlers: [
+          {
+            handler: 'handleProxyStart',
+            filter: {
+              kind: 'once',
+            },
+          },
+        ],
+        eventHandlers: [
+          { event: 'AnswerUpdated(indexed int256,indexed uint256,uint256)', handler: 'handlePriceUpdated' },
+        ],
+        file: './src/oracleMapping.ts',
       },
     })
   }

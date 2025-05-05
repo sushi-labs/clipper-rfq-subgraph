@@ -15,10 +15,7 @@ export function getMoonbeamDeploymentConfig(): Deployment {
       {
         address: '0xe90d415af331237ae18a882ec21870f1965be933',
         startBlock: 576698,
-        contractAbiName: 'ClipperDirectExchangeV0',
-        /**
-         * Compliant with ClipperCommonExchangeV0 but missing AssetWithdrawn event. It will just ignore that event handler
-         */
+        contractAbiName: 'ClipperDirectExchangeV1',
         sourceAbi: 'ClipperCommonExchangeV0',
       },
     ],

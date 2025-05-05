@@ -2,7 +2,7 @@ import { Deployment } from '../config'
 
 export function getArbitrumDeploymentConfig(): Deployment {
   return {
-    networkName: 'arbitrum',
+    networkName: 'arbitrum-one',
     pools: [
         {
           address: '0x769728b5298445BA2828c0f3F5384227fbF590C5',
@@ -67,14 +67,7 @@ export function getArbitrumDeploymentConfig(): Deployment {
           sourceAbi: 'AggregatorV3Interface',
         },
         {
-          tokens: ['0xaf88d065e77c8cC2239327C5EDb3A432268e5831'],
-          address: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
-          startBlock: 101256,
-          contractAbiName: 'AggregatorV3Interface',
-          sourceAbi: 'AggregatorV3Interface',
-        },
-        {
-          tokens: ['0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'],
+          tokens: ['0xaf88d065e77c8cC2239327C5EDb3A432268e5831', '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'],
           address: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
           startBlock: 101256,
           contractAbiName: 'AggregatorV3Interface',

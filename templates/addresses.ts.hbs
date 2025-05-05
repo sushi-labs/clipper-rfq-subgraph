@@ -26,19 +26,6 @@ feeSplitsForPool{{@index}}.push('{{farmFeeSplit}}'.toLowerCase());
 ClipperFeeSplitAddressesByDirectExchange.set('{{address}}'.toLowerCase(), feeSplitsForPool{{@index}});
 {{/each}}
 
-export let PriceOracleByToken = new TypedMap<Address, Address>()
-export let TokenByOracle = new TypedMap<Address, Address>()
-export let OracleStartBlocks = new TypedMap<Address, string>()
-{{#each priceOracles as | oracle |}}
-{{#each oracle.tokens}}
-PriceOracleByToken.set(Address.fromString('{{this}}'), Address.fromString('{{oracle.address}}'))
-TokenByOracle.set(Address.fromString('{{oracle.address}}'), Address.fromString('{{this}}'))
-{{/each}}
-{{#if oracle.startBlock}}
-OracleStartBlocks.set(Address.fromString('{{oracle.address}}'), '{{oracle.startBlock}}')
-{{/if}}
-{{/each}}
-
 
 export let FallbackAssetPrice = new TypedMap<Address, string>()
 {{#each fallbackPrices}}

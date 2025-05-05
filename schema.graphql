@@ -115,6 +115,7 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
 enum TokenPriceSource {
   ORACLE
   SNAPSHOT
+  COVE
 }
 
 type Token @entity(immutable: false) {
@@ -137,12 +138,21 @@ type Token @entity(immutable: false) {
   # total amount in USD deposited in pool
   depositedUSD: BigDecimal!
   # price of the token in USD
-  priceUSD: BigDecimal!
-  priceSource: TokenPriceSource!
+  priceUSD: BigDecimal
+  priceSource: TokenPriceSource
+  priceAggregatorProxy: PriceAggregatorProxy
   # last price update timestamp
-  priceUpdatedAt: Timestamp!
+  priceUpdatedAt: Timestamp
 
   pools: [PoolToken!]! @derivedFrom(field: "token")
+}
+
+type PriceAggregatorProxy @entity(immutable: false) {
+  id: Bytes!
+  aggregator: Bytes!
+  aggregatorLastCheckedAt: Timestamp!
+  aggregatorConfirmedAt: Timestamp!
+  tokens: [Token!]! @derivedFrom(field: "priceAggregatorProxy")
 }
 
 type PoolToken @entity(immutable: false) {

@@ -5,7 +5,7 @@ import {
   Swapped,
   Transfer,
   Withdrawn,
-} from '../types/templates/ClipperCommonExchangeV0/ClipperPool'
+} from '../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
 import { Deposit, PoolEvent, Swap, Withdrawal } from '../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
@@ -129,8 +129,10 @@ export function handleSwapped(event: Swapped): void {
   let poolOutAsset = loadPoolToken(poolAddress, outAsset)
   let amountIn = convertTokenToDecimal(event.params.inAmount, inAsset.decimals)
   let amountOut = convertTokenToDecimal(event.params.outAmount, outAsset.decimals)
-  let inputPrice = getTokenUsdPrice(inAsset, event.block).priceUSD
-  let outputPrice = getTokenUsdPrice(outAsset, event.block).priceUSD
+  let inputTokenPrice = getTokenUsdPrice(inAsset, event.block)
+  let outputTokenPrice = getTokenUsdPrice(outAsset, event.block)
+  let inputPrice = inputTokenPrice ? inputTokenPrice.priceUSD : BIG_DECIMAL_ZERO
+  let outputPrice = outputTokenPrice ? outputTokenPrice.priceUSD : BIG_DECIMAL_ZERO
   let amountInUsd = inputPrice.times(amountIn)
   let amountOutUsd = outputPrice.times(amountOut)
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
@@ -138,6 +140,12 @@ export function handleSwapped(event: Swapped): void {
   let swap = new Swap(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
+  let feeUSD: BigDecimal = BIG_DECIMAL_ZERO
+  // Only calculate fee if both prices are available, otherwise the fee would equal the transaction volume
+  if (inputTokenPrice && outputTokenPrice) {
+    feeUSD = amountInUsd.minus(amountOutUsd).lt(BIG_DECIMAL_ZERO) ? BIG_DECIMAL_ZERO : amountInUsd.minus(amountOutUsd)
+  }
+  swap.feeUSD = feeUSD
   swap.transaction = event.transaction.hash
   swap.timestamp = event.block.timestamp.toI32()
   swap.inToken = inAsset.id
@@ -156,8 +164,7 @@ export function handleSwapped(event: Swapped): void {
   swap.pool = poolAddress
   swap.swapType = 'POOL'
 
-  let feeUSD = amountInUsd.minus(amountOutUsd).lt(BIG_DECIMAL_ZERO) ? BIG_DECIMAL_ZERO : amountInUsd.minus(amountOutUsd)
-  swap.feeUSD = feeUSD
+
 
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let inTokenBalance: BigDecimal = BIG_DECIMAL_ZERO
