@@ -5,7 +5,7 @@ import { Pool, PoolEvent, PriceAggregatorProxy } from '../types/schema'
 import { ORACLE_PRICE_SOURCE, ORACLE_UPDATE_EVENT } from './constants'
 import { PoolHelpers } from './utils/pool'
 import { PriceOracle as PriceOracleTemplate } from '../types/templates'
-import { updateTokenAggregatorDaily } from './utils/prices'
+import { updatePriceAggregatorProxyDaily } from './utils/prices'
 import { loadPriceAggregatorProxy } from './entities/PriceAggregatorProxy'
 
 export function handleProxyStart(block: ethereum.Block): void {
@@ -28,11 +28,9 @@ export function handleProxyStart(block: ethereum.Block): void {
 
 export function handlePriceUpdated(event: AnswerUpdated): void {
   let context = dataSource.context()
-  let proxyAddress = context.getBytes('proxyAddress')
-  let priceAggregatorProxy = PriceAggregatorProxy.load(proxyAddress)
-  if (!priceAggregatorProxy) {
-    return
-  }
+  let proxyAddressBytes = context.getBytes('proxyAddress')
+  let proxyAddress = Address.fromBytes(proxyAddressBytes)
+  let priceAggregatorProxy = updatePriceAggregatorProxyDaily(proxyAddress, event.block)
   let aggregatorAddress = event.address
   /** If the aggregator address is not the same as the proxy address, it means the aggregator has been updated.
    * And we don't want to update the price with the old aggregator even if the price is updated.
@@ -44,7 +42,6 @@ export function handlePriceUpdated(event: AnswerUpdated): void {
   let tokens = priceAggregatorProxy.tokens.load()
   for (let i = 0; i < tokens.length; i++) {
     let token = tokens[i]
-    updateTokenAggregatorDaily(token, event.block)
 
     /**
      * All USD price oracles are 8 decimals. While this may change, it would be a breaking change for many projects, so it's unlikely.

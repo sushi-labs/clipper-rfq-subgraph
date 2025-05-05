@@ -4,7 +4,7 @@ import { AggregatorV3Interface } from '../../types/templates/ClipperCommonExchan
 import { FallbackAssetPrice, DailyFallbackPrices } from '../addresses'
 import { BIG_DECIMAL_ZERO, ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
 import { getOpenTime } from './time'
-import { Token } from '../../types/schema'
+import { PriceAggregatorProxy, Token } from '../../types/schema'
 import { PriceOracle as PriceOracleTemplate } from '../../types/templates'
 import { loadPriceAggregatorProxy } from '../entities/PriceAggregatorProxy'
 
@@ -64,35 +64,29 @@ class TokenPrice {
   }
 }
 
-export function updateTokenAggregatorDaily(token: Token, block: ethereum.Block): void {
-  let priceAggregatorProxyBytes = token.priceAggregatorProxy ? token.priceAggregatorProxy : null
-  let oracleProxyAddress = priceAggregatorProxyBytes ? Address.fromBytes(priceAggregatorProxyBytes) : null
-  if (!oracleProxyAddress) {
-    return
-  }
+export function updatePriceAggregatorProxyDaily(oracleProxyAddress: Address, block: ethereum.Block): PriceAggregatorProxy {
   let priceAggregatorProxy = loadPriceAggregatorProxy(oracleProxyAddress, block)
-  let timeSinceLastChecked = block.timestamp.toI32() - priceAggregatorProxy.aggregatorLastCheckedAt
+  let timestamp = block.timestamp.toI32()
+  let timeSinceLastChecked = timestamp - priceAggregatorProxy.aggregatorLastCheckedAt
   if (timeSinceLastChecked < ONE_DAY) {
-    return
+    return priceAggregatorProxy
   }
 
   let oracleContract = AggregatorV3Interface.bind(oracleProxyAddress)
   let aggregator = oracleContract.aggregator()
   if (aggregator.notEqual(priceAggregatorProxy.aggregator)) {
     priceAggregatorProxy.aggregator = aggregator
-    let timestamp = block.timestamp.toI32()
-    priceAggregatorProxy.aggregatorLastCheckedAt = timestamp
     priceAggregatorProxy.aggregatorConfirmedAt = timestamp
-    priceAggregatorProxy.save()
 
     let newContext = new DataSourceContext()
     newContext.setBytes('proxyAddress', oracleProxyAddress)
-    log.debug('Creating PriceOracle data source for aggregator: {} at block {}', [
-      aggregator.toHexString(),
-      block.number.toString(),
-    ])
     PriceOracleTemplate.createWithContext(aggregator, newContext)
   }
+
+  priceAggregatorProxy.aggregatorLastCheckedAt = timestamp
+  priceAggregatorProxy.save()
+
+  return priceAggregatorProxy
 }
 
 /**
@@ -127,7 +121,11 @@ export function eth_getTokenUsdPrice(token: Token, block: ethereum.Block): Token
  * @returns The USD price of the token
  */
 export function getTokenUsdPrice(token: Token, block: ethereum.Block): TokenPrice | null {
-  updateTokenAggregatorDaily(token, block)
+  let priceAggregatorProxyBytes = token.priceAggregatorProxy ? token.priceAggregatorProxy : null
+  let priceAggregatorProxyAddress = priceAggregatorProxyBytes ? Address.fromBytes(priceAggregatorProxyBytes) : null
+  if (priceAggregatorProxyAddress) {
+    updatePriceAggregatorProxyDaily(priceAggregatorProxyAddress, block)
+  }
   let savedTokenPriceUsd = token.priceUSD
   if (token.priceSource === ORACLE_PRICE_SOURCE && savedTokenPriceUsd !== null) {
     // Check if price is less than a day old when using oracle and return cached price
