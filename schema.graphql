@@ -36,6 +36,9 @@ type Pool @entity(immutable: false) {
   # number of pool tokens supplied by the smart contract (used for time-travel queries)
   poolTokensSupply: BigInt!
 
+  # Current total pool tokens held by fee split addresses
+  feeSplitPoolTokens: BigInt!
+
   # derived pool transaction sources
   transactionSources: [PoolTransactionSource!]! @derivedFrom(field: "pool")
 

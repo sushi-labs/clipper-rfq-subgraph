@@ -1,4 +1,4 @@
-import { Address, BigDecimal, BigInt, Bytes, dataSource, ethereum } from '@graphprotocol/graph-ts'
+import { BigDecimal, BigInt, Bytes, dataSource, ethereum, log } from '@graphprotocol/graph-ts'
 import {
   AssetWithdrawn,
   Deposited,
@@ -18,9 +18,9 @@ import {
   loadTransactionSource,
 } from './utils'
 import { getTokenUsdPrice } from './utils/prices'
-import { eth_fetchBigIntTokenBalance } from './utils/token'
-import { ClipperFeeSplitAddressesByDirectExchange, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
+import { ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
 import { PoolHelpers } from './utils/pool'
+import { eth_fetchBigIntTokenBalance } from './utils/token'
 
 export function handleDeposited(event: Deposited): void {
   let timestamp = event.block.timestamp
@@ -43,7 +43,7 @@ export function handleDeposited(event: Deposited): void {
   newDeposit.poolTokens = receivedPoolTokens
   newDeposit.amountUsd = usdProportion
 
-  let farmingHelper = FarmingHelpersByPool.get(event.address.toHexString().toLowerCase())
+  let farmingHelper = FarmingHelpersByPool.get(event.address)
   if (farmingHelper) {
     newDeposit.depositor = farmingHelper
   } else {
@@ -164,8 +164,6 @@ export function handleSwapped(event: Swapped): void {
   swap.pool = poolAddress
   swap.swapType = 'POOL'
 
-
-
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let inTokenBalance: BigDecimal = BIG_DECIMAL_ZERO
   let outTokenBalance: BigDecimal = BIG_DECIMAL_ZERO
@@ -226,18 +224,10 @@ export function handleSwapped(event: Swapped): void {
   
   let isUniqueUser = upsertUser(event.transaction.from, event.block.timestamp, transactionVolume)
 
-  let feeSplitAddresses = ClipperFeeSplitAddressesByDirectExchange.get(poolAddress.toHexString().toLowerCase())
-  let poolTokenOwnedByFeeSplit: BigInt = BIG_INT_ZERO
-  if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
-    for (let i = 0; i < feeSplitAddresses.length; i++) {
-      poolTokenOwnedByFeeSplit = poolTokenOwnedByFeeSplit.plus(
-        eth_fetchBigIntTokenBalance(poolAddress, Address.fromString(feeSplitAddresses[i])),
-      )
-    }
+  let theFraction = BIG_DECIMAL_ZERO;
+  if (pool.poolTokensSupply.gt(BIG_INT_ZERO)) {
+      theFraction = pool.feeSplitPoolTokens.toBigDecimal().div(pool.poolTokensSupply.toBigDecimal());
   }
-
-  // the fraction owned by fee split contract
-  let theFraction = poolTokenOwnedByFeeSplit.toBigDecimal().div(poolTokensSupply.toBigDecimal())
   let daoRevenueFraction = event.block.timestamp.ge(BigInt.fromI32(1690848000))
     ? BigDecimal.fromString('1')
     : BigDecimal.fromString('0.5')
@@ -275,7 +265,8 @@ export function handleSwapped(event: Swapped): void {
 }
 
 export function handleTransfer(event: Transfer): void {
-  let permitRouter = PermitRoutersByPool.get(event.address.toHexString().toLowerCase())
+  let poolAddress = event.address
+  let permitRouter = PermitRoutersByPool.get(poolAddress)
 
   if (permitRouter && event.params.from.equals(permitRouter)) {
     let deposit = Deposit.load(event.transaction.hash)
@@ -285,5 +276,52 @@ export function handleTransfer(event: Transfer): void {
 
     deposit.depositor = event.params.to
     deposit.save()
+    // Don't process fee split logic for permit router transfers
+    return
+  }
+
+  // Update fee split balance if relevant
+  let feeSplitAddresses = ClipperFeeSplitAddressesByPool.get(poolAddress)
+  if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
+    let context = dataSource.context()
+    let poolContractAbiName = context.getString('contractAbiName')
+    let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, event.block)
+    let pool = poolHelpers.loadPool() 
+
+    let fromIsFeeSplit = feeSplitAddresses.includes(event.params.from)
+    let toIsFeeSplit = feeSplitAddresses.includes(event.params.to)
+
+    // Update balance only if transfer is between fee split and non-fee split
+    if (fromIsFeeSplit !== toIsFeeSplit) {
+      let transferAmount = event.params.value
+
+      if (toIsFeeSplit) {
+        // Tokens transferred TO a fee split address
+        pool.feeSplitPoolTokens = pool.feeSplitPoolTokens.plus(transferAmount)
+      } else {
+        // Tokens transferred FROM a fee split address
+        pool.feeSplitPoolTokens = pool.feeSplitPoolTokens.minus(transferAmount)
+      }
+      // Ensure balance doesn't go below zero due to potential initialization issues
+      if (pool.feeSplitPoolTokens.lt(BIG_INT_ZERO)) {
+        log.warning(
+          'Fee split token balance went below zero for pool {} ({}). Resetting from contract call. Tx: {}',
+          [
+            poolAddress.toHexString(),
+            pool.feeSplitPoolTokens.toString(),
+            event.transaction.hash.toHexString(),
+          ]
+        )
+        // Recalculate total balance as a fallback if it goes negative
+        let currentTotalFeeSplitSupply = BIG_INT_ZERO
+        for (let i = 0; i < feeSplitAddresses.length; i++) {
+           currentTotalFeeSplitSupply = currentTotalFeeSplitSupply.plus(
+              eth_fetchBigIntTokenBalance(poolAddress, feeSplitAddresses[i])
+           )
+        }
+        pool.feeSplitPoolTokens = currentTotalFeeSplitSupply
+      }
+      pool.save()
+    }
   }
 }

@@ -380,7 +380,8 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
   for (const sourceAbi of PoolSourceAbiSet.values()) {
     if (sourceAbi === 'ClipperCommonExchangeV0') {
       for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0) {
-        const eventHandlers = (ClipperCommonExchangeV0Template.mapping.eventHandlers || []).flatMap(
+        // Get handlers other than Transfer
+        const baseEventHandlers = (ClipperCommonExchangeV0Template.mapping.eventHandlers || []).flatMap(
           ({ calls, ...handler }) => {
             if (handler.handler === 'handleTransfer') {
               return []
@@ -393,9 +394,18 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
             ]
           },
         )
-        const abis = ClipperCommonExchangeV0Template.mapping.abis.filter(
-          abi => !CLIPPER_POOL_ABIS.find(c => c.name === abi.name),
-        )
+
+        // Define the Transfer handler object
+        const transferEventHandler = {
+          event: 'Transfer(indexed address,indexed address,uint256)',
+          handler: 'handleTransfer',
+        }
+
+        // Conditionally include the Transfer handler if needed
+        const finalEventHandlers = (pool.permitRouter || pool.feeSplit || pool.farmFeeSplit)
+            ? [...baseEventHandlers, transferEventHandler]
+            : baseEventHandlers
+  
         dataSources.push({
           ...ClipperCommonExchangeV0Template,
           name: `${pool.contractAbiName}_${pool.address}`,
@@ -410,18 +420,7 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
           },
           mapping: {
             ...ClipperCommonExchangeV0Template.mapping,
-            eventHandlers: [
-              ...eventHandlers,
-              {
-                event: 'Transfer(indexed address,indexed address,uint256)',
-                handler: 'handleTransfer',
-                ...(pool.permitRouter
-                  ? {
-                      topic1: [pool.permitRouter],
-                    }
-                  : {}),
-              },
-            ],
+            eventHandlers: finalEventHandlers,
           },
         })
       }

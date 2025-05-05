@@ -6,6 +6,8 @@ import {
 } from '../../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
 import { Pool, PoolToken } from '../../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
+import { ClipperFeeSplitAddressesByPool } from '../addresses'
+import { eth_fetchBigIntTokenBalance } from './token'
 
 export class PoolHelpers {
   private poolAddress: Address
@@ -45,6 +47,18 @@ export class PoolHelpers {
 
       pool.poolTokensSupply = this.eth_getPoolTokenSupply()
       pool.uniqueUsers = BIG_INT_ZERO
+
+      // Initialize fee split token balance
+      let feeSplitAddresses = ClipperFeeSplitAddressesByPool.get(this.poolAddress)
+      let initialFeeSplitSupply = BIG_INT_ZERO
+      if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
+        for (let i = 0; i < feeSplitAddresses.length; i++) {
+          initialFeeSplitSupply = initialFeeSplitSupply.plus(
+            eth_fetchBigIntTokenBalance(this.poolAddress, feeSplitAddresses[i])
+          )
+        }
+      }
+      pool.feeSplitPoolTokens = initialFeeSplitSupply
 
       pool.save()
 

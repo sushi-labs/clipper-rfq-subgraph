@@ -1,29 +1,29 @@
 import { Address, TypedMap } from '@graphprotocol/graph-ts';
 
-export let PermitRoutersByPool = new TypedMap<string, Address>();
+export let PermitRoutersByPool = new TypedMap<Address, Address>();
 {{#each pools}}
 {{#ifAddress permitRouter}}
-PermitRoutersByPool.set('{{address}}'.toLowerCase(), Address.fromString('{{permitRouter}}'));
+PermitRoutersByPool.set(Address.fromString('{{address}}'), Address.fromString('{{permitRouter}}'));
 {{/ifAddress}}
 {{/each}}
 
-export let FarmingHelpersByPool = new TypedMap<string, Address>();
+export let FarmingHelpersByPool = new TypedMap<Address, Address>();
 {{#each pools}}
 {{#ifAddress farmingHelper}}
-FarmingHelpersByPool.set('{{address}}'.toLowerCase(), Address.fromString('{{farmingHelper}}'));
+FarmingHelpersByPool.set(Address.fromString('{{address}}'), Address.fromString('{{farmingHelper}}'));
 {{/ifAddress}}
 {{/each}}
 
-export let ClipperFeeSplitAddressesByDirectExchange = new TypedMap<string, Array<string>>();
+export let ClipperFeeSplitAddressesByPool = new TypedMap<Address, Array<Address>>();
 {{#each pools}}
-let feeSplitsForPool{{@index}} = new Array<string>();
+let feeSplitsForPool{{@index}} = new Array<Address>();
 {{#ifAddress feeSplit}}
-feeSplitsForPool{{@index}}.push('{{feeSplit}}'.toLowerCase());
+feeSplitsForPool{{@index}}.push(Address.fromString('{{feeSplit}}'));
 {{/ifAddress}}
 {{#ifAddress farmFeeSplit}}
-feeSplitsForPool{{@index}}.push('{{farmFeeSplit}}'.toLowerCase());
+feeSplitsForPool{{@index}}.push(Address.fromString('{{farmFeeSplit}}'));
 {{/ifAddress}}
-ClipperFeeSplitAddressesByDirectExchange.set('{{address}}'.toLowerCase(), feeSplitsForPool{{@index}});
+ClipperFeeSplitAddressesByPool.set(Address.fromString('{{address}}'), feeSplitsForPool{{@index}});
 {{/each}}
 
 
