@@ -84,7 +84,9 @@ export function updateTokenAggregatorDaily(token: Token, block: ethereum.Block):
   let aggregator = oracleContract.aggregator()
   if (aggregator.notEqual(priceAggregatorProxy.aggregator)) {
     priceAggregatorProxy.aggregator = aggregator
-    priceAggregatorProxy.aggregatorLastCheckedAt = block.timestamp.toI32()
+    let timestamp = block.timestamp.toI32()
+    priceAggregatorProxy.aggregatorLastCheckedAt = timestamp
+    priceAggregatorProxy.aggregatorConfirmedAt = timestamp
     priceAggregatorProxy.save()
 
     let newContext = new DataSourceContext()
@@ -118,7 +120,7 @@ export function eth_getTokenUsdPrice(token: Token, block: ethereum.Block): Token
   let oracleContract = AggregatorV3Interface.bind(tokenOracleAddress)
   let answer = oracleContract.latestRoundData()
   // All USD price oracles are 8 decimals. While this may change, it would be a breaking change for many projects, so it's unlikely.
-  let price = convertTokenToDecimal(answer.value1, BigInt.fromI32(8))
+  let price = convertTokenToDecimal(answer.value1, 8)
   return new TokenPrice(token, price, ORACLE_PRICE_SOURCE)
 }
 

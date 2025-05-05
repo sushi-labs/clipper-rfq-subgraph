@@ -31,8 +31,8 @@ export function handleDeposited(event: Deposited): void {
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
   let poolTokenSupply = allTokensBalance.value2
-  let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, BigInt.fromI32(18))
-  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
+  let receivedPoolTokens = convertTokenToDecimal(event.params.poolTokens, 18)
+  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, 18)
 
   let poolOwnedAmount = receivedPoolTokens.div(totalPoolTokens)
   let usdProportion = currentPoolLiquidity.times(poolOwnedAmount)
@@ -76,8 +76,8 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
   let poolTokenSupply = pool.poolTokensSupply.minus(poolTokensWithdrawn)
-  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BigInt.fromI32(18))
-  let burntPoolTokens = convertTokenToDecimal(poolTokensWithdrawn, BigInt.fromI32(18))
+  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, 18)
+  let burntPoolTokens = convertTokenToDecimal(poolTokensWithdrawn, 18)
 
   let burntProportion = burntPoolTokens.div(totalPoolTokens.plus(burntPoolTokens))
   let usdProportion = currentPoolLiquidity.times(burntProportion)

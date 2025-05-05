@@ -205,6 +205,7 @@ const ClipperCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
       'Withdrawal',
       'Swap',
       'Pair',
+      'PriceAggregatorProxy',
     ],
     abis: [
       ...CLIPPER_POOL_ABIS,
@@ -284,6 +285,7 @@ const ClipperCoveTemplate: Omit<DataSourceTemplate, 'network'> = {
       'CoveEvent',
       'CoveParent',
       'UserCoveStake',
+      'PriceAggregatorProxy',
     ],
     abis: [
       {
@@ -345,7 +347,7 @@ const PriceOracleTemplate: Omit<DataSourceTemplate, 'network'> = {
     kind: 'ethereum/events',
     apiVersion: '0.0.9',
     language: 'wasm/assemblyscript',
-    entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent'],
+    entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent', 'PriceAggregatorProxy'],
     abis: [
       {
         name: 'AggregatorV3Interface',
@@ -461,7 +463,7 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
         kind: 'ethereum/events',
         apiVersion: '0.0.9',
         language: 'wasm/assemblyscript',
-        entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent'],
+        entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent', 'PriceAggregatorProxy'],
         abis: PriceOracleTemplate.mapping.abis,
         blockHandlers: [
           {
@@ -470,9 +472,6 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
               kind: 'once',
             },
           },
-        ],
-        eventHandlers: [
-          { event: 'AnswerUpdated(indexed int256,indexed uint256,uint256)', handler: 'handlePriceUpdated' },
         ],
         file: './src/oracleMapping.ts',
       },

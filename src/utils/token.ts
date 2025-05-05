@@ -14,7 +14,7 @@ import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 export function eth_fetchTokenSymbol(tokenAddress: Address): string {
   let contract = ERC20.bind(tokenAddress)
 
-  if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
+  if (tokenAddress.equals(ADDRESS_ZERO)) {
     return AddressZeroSymbol
   }
   // try types string and bytes32 for symbol
@@ -34,7 +34,7 @@ export function eth_fetchTokenSymbol(tokenAddress: Address): string {
  * @param tokenAddress - The address of the token
  * @returns The decimals of the token
  */
-export function eth_fetchTokenDecimals(tokenAddress: Address): BigInt {
+export function eth_fetchTokenDecimals(tokenAddress: Address): i32 {
   let contract = ERC20.bind(tokenAddress)
   // try types uint8 for decimals
   let decimalValue = 18
@@ -45,7 +45,7 @@ export function eth_fetchTokenDecimals(tokenAddress: Address): BigInt {
     decimalValue = decimalResult.value
   }
 
-  return BigInt.fromI32(decimalValue)
+  return decimalValue
 }
 
 /**
@@ -55,7 +55,7 @@ export function eth_fetchTokenDecimals(tokenAddress: Address): BigInt {
  * @returns The name of the token
  */
 export function eth_fetchTokenName(tokenAddress: Address): string {
-  if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
+  if (tokenAddress.equals(ADDRESS_ZERO)) {
     return AddressZeroName
   }
 

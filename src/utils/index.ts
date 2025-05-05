@@ -1,19 +1,19 @@
 import { Address, BigDecimal, BigInt, Bytes, ethereum } from '@graphprotocol/graph-ts'
 import { CoveTransactionSource, PoolToken, PoolTransactionSource, Token, TransactionSource } from '../../types/schema'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
+import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { eth_fetchTokenDecimals, eth_fetchTokenName, eth_fetchTokenSymbol } from './token'
 import { eth_getTokenUsdPrice } from './prices'
 
-export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
+export function exponentToBigDecimal(decimals: i32): BigDecimal {
   let bd = BigDecimal.fromString('1')
-  for (let i = BIG_INT_ZERO; i.lt(decimals as BigInt); i = i.plus(BIG_INT_ONE)) {
+  for (let i = 0; i < decimals; i++) {
     bd = bd.times(BigDecimal.fromString('10'))
   }
   return bd
 }
 
-export function convertTokenToDecimal(tokenAmount: BigInt, exchangeDecimals: BigInt): BigDecimal {
-  if (exchangeDecimals == BIG_INT_ZERO) {
+export function convertTokenToDecimal(tokenAmount: BigInt, exchangeDecimals: i32): BigDecimal {
+  if (exchangeDecimals == 0) {
     return tokenAmount.toBigDecimal()
   }
   return tokenAmount.toBigDecimal().div(exponentToBigDecimal(exchangeDecimals))

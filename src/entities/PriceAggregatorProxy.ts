@@ -1,4 +1,4 @@
-import { Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { Address, ethereum } from '@graphprotocol/graph-ts'
 import { PriceAggregatorProxy } from '../../types/schema'
 import { AggregatorV3Interface } from '../../types/templates/PriceOracle/AggregatorV3Interface'
 
@@ -8,11 +8,11 @@ export function loadPriceAggregatorProxy(proxyAddress: Address, block: ethereum.
     proxy = new PriceAggregatorProxy(proxyAddress)
     let proxyContract = AggregatorV3Interface.bind(proxyAddress)
     let aggregatorAddress = proxyContract.aggregator()
-    proxy.aggregatorLastCheckedAt = block.timestamp.toI32()
-    proxy.aggregatorConfirmedAt = block.timestamp.toI32()
+    let timestamp = block.timestamp.toI32()
+    proxy.aggregatorLastCheckedAt = timestamp
+    proxy.aggregatorConfirmedAt = timestamp
     proxy.aggregator = aggregatorAddress
     proxy.save()
-    log.debug('Created PriceAggregatorProxy: {} at block {}', [proxyAddress.toHexString(), block.number.toString()])
   }
 
   return proxy

@@ -129,7 +129,7 @@ type Token @entity(immutable: false) {
   # token name
   name: String!
   # token decimals
-  decimals: BigInt!
+  decimals: Int!
   # transactions across all pools that include this token
   txCount: BigInt!
   # volume in token units

@@ -1,7 +1,7 @@
 import { Address, BigDecimal, BigInt, Bytes, TypedMap, ethereum } from "@graphprotocol/graph-ts";
 import { convertTokenToDecimal } from ".";
 import { ClipperCove } from "../../types/templates/ClipperCove/ClipperCove";
-import { BIG_DECIMAL_ZERO, BIG_INT_EIGHTEEN } from "../constants";
+import { BIG_DECIMAL_ZERO } from "../constants";
 import { PoolHelpers } from "./pool";
 export function eth_getCoveBalances(coveParentAddress: Address, tokenAddress: Address, decimals: i32): Array<BigDecimal> {
   let coveContract = ClipperCove.bind(coveParentAddress)
@@ -11,8 +11,8 @@ export function eth_getCoveBalances(coveParentAddress: Address, tokenAddress: Ad
   let mask = (BigInt.fromI32(1).leftShift(128)).minus(BigInt.fromI32(1))
   let tokenBalance = lastBalances.bitAnd(mask)
 
-  let poolTokens = convertTokenToDecimal(lpTokens, BIG_INT_EIGHTEEN)
-  let assetBalance = convertTokenToDecimal(tokenBalance, BigInt.fromI32(decimals))
+  let poolTokens = convertTokenToDecimal(lpTokens, 18)
+  let assetBalance = convertTokenToDecimal(tokenBalance, decimals)
   
   return [poolTokens, assetBalance]
 }
@@ -50,7 +50,7 @@ export function eth_getCoveAssetPrice(
   // gets the USD liquidity in our current pool
   let currentPoolLiquidity = pool.poolValueUSD
   let poolTokenSupply = pool.poolTokensSupply
-  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, BIG_INT_EIGHTEEN)
+  let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, 18)
 
   let covePoolTokenProportion = poolTokensAmount.div(totalPoolTokens)
 

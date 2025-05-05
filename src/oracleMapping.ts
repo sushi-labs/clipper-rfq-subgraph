@@ -19,7 +19,6 @@ export function handleProxyStart(block: ethereum.Block): void {
   let token = loadToken(tokenAddress, block)
   token.priceAggregatorProxy = priceAggregatorProxy.id
   token.save()
-
   let newContext = new DataSourceContext()
   newContext.setBytes('proxyAddress', proxyAddress)
   let aggregatorAddress = Address.fromBytes(priceAggregatorProxy.aggregator)
@@ -51,7 +50,7 @@ export function handlePriceUpdated(event: AnswerUpdated): void {
      * All USD price oracles are 8 decimals. While this may change, it would be a breaking change for many projects, so it's unlikely.
      * We want to avoid the eth_call of the oracle contract decimals.
      */
-    token.priceUSD = convertTokenToDecimal(event.params.current, BigInt.fromI32(8))
+    token.priceUSD = convertTokenToDecimal(event.params.current, 8)
     token.priceSource = ORACLE_PRICE_SOURCE
     token.priceUpdatedAt = event.block.timestamp.toI32()
     token.save()
