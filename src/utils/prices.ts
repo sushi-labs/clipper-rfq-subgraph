@@ -37,20 +37,16 @@ class TokenOraclePriceConfig {
         let price = dailyPrices.get(dayTimestamp)
         if (price) {
           this.fallbackPrice = BigDecimal.fromString(price.toString())
-        } else {
-          this.fallbackPrice = BIG_DECIMAL_ZERO
         }
       }
     }
 
     // Fall back to general fallback price if no daily price is available
     fallbackExist = FallbackAssetPrice.isSet(tokenAddress)
-    if (!this.useOracle && fallbackExist) {
+    if (!this.useOracle && fallbackExist && this.fallbackPrice === null) {
       let fallbackPrice = FallbackAssetPrice.get(tokenAddress)
       if (fallbackPrice) {
         this.fallbackPrice = BigDecimal.fromString(fallbackPrice.toString())
-      } else {
-        this.fallbackPrice = BIG_DECIMAL_ZERO
       }
     }
   }
