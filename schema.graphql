@@ -115,6 +115,31 @@ type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
   revenueUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapRevenueUSD else 0 end")
 }
 
+type PoolsStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
+  # Aggregation ID (auto-managed, Int8! type)
+  id: Int8!
+  # Start timestamp of the aggregation interval (Timestamp! type)
+  timestamp: Timestamp!
+  # Total volume (USD) from swaps in the interval
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  # Total fees (USD) from swaps in the interval
+  feeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapFeeUSD else 0 end")
+  # Total number of events in the interval, ignoring oracle updates (Int8! type) 
+  txCount: Int8! @aggregate(fn: "sum", arg: "case when type != 3 then 1 else 0 end")
+  # Number of swaps in the interval (Int8! type) - useful for client-side avg calculation
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  # Number of deposits in the interval (Int8! type)
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  # Total deposited amount (USD) in the interval
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  # Number of withdrawals in the interval (Int8! type)
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  # Total withdrawn amount (USD) in the interval
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+  # Revenue made by clipper fee split (USD)
+  revenueUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapRevenueUSD else 0 end")
+}
+
 enum TokenPriceSource {
   ORACLE
   SNAPSHOT
@@ -424,6 +449,18 @@ type CoveStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
 
   initialPrice: BigDecimal! @aggregate(fn: "first", arg: "covePrice")
   price: BigDecimal! @aggregate(fn: "last", arg: "covePrice")
+}
+
+type CovesStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
+  id: Int8!
+  timestamp: Timestamp!
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  txCount: Int8! @aggregate(fn: "count")
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
 }
 
 type UserCoveStake @entity(immutable: false) {
