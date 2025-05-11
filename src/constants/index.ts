@@ -17,3 +17,7 @@ export const ORACLE_UPDATE_EVENT: i8 = 3
 export const ORACLE_PRICE_SOURCE: string = 'ORACLE'
 export const SNAPSHOT_PRICE_SOURCE: string = 'SNAPSHOT'
 export const COVE_PRICE_SOURCE: string = 'COVE'
+
+export const FARM_VAULT_TYPE: string = 'FARM'
+export const PROTOCOL_DEPOSIT_VAULT_TYPE: string = 'PROTOCOL_DEPOSIT'
+export const FEE_SPLIT_VAULT_TYPE: string = 'FEE_SPLIT'

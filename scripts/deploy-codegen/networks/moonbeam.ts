@@ -19,6 +19,7 @@ export function getMoonbeamDeploymentConfig(): Deployment {
         sourceAbi: 'ClipperCommonExchangeV0',
       },
     ],
+    lpTransfers: [{ address: '0x94f3e9656351bb4aa5ad37ce5cf04e117bbe21d4', startBlock: 1018730 }],
     coves: [
       {
         address: '0x3309a431de850Ec554E5F22b2d9fC0B245a2023e',

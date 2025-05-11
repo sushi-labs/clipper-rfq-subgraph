@@ -11,6 +11,21 @@ export function getMainnetDeploymentConfig(): Deployment {
         farmFeeSplit: '0xD0454428ecd868A9AC615125FCbDB5Da9027436e',
         contractAbiName: 'ClipperApproximateCaravelExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
+        vaults: [
+          {
+            address: '0x84f4625C3E92b368E403cB002A9bF9bc7a9ae1b9',
+            type: 'PROTOCOL_DEPOSIT',
+            transferHelper: '0x12bb166F997146D3d33645146eEdBC4a923195D7',
+            startBlock: 16934616,
+          },
+          {
+            type: 'FARM',
+            address: '0xD0454428ecd868A9AC615125FCbDB5Da9027436e',
+            farmingHelper: '0x6e3FB8a019E78785E80cea1d413Bc3Ab650c2449',
+            startBlock: 17970623,
+            abi: 'SplitFeeFarm',
+          },
+        ],
       },
       {
         address: '0xe7b0ce0526fbe3969035a145c9e9691d4d9d216c',
@@ -18,12 +33,25 @@ export function getMainnetDeploymentConfig(): Deployment {
         feeSplit: '0x51b0efa27ff4f29f8315496f01952377d581ce73',
         contractAbiName: 'ClipperVerifiedCaravelExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
+        vaults: [
+          {
+            address: '0x51b0efa27ff4f29f8315496f01952377d581ce73',
+            type: 'FEE_SPLIT',
+            startBlock: 15304973,
+          },
+        ],
       },
       {
         address: '0xcc12532e95c2a6a4c53af153b9b739a3cc9218a7',
         startBlock: 14461923,
         contractAbiName: 'ClipperCaravelExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
+      },
+    ],
+    lpTransfers: [
+      {
+        address: '0x53954A6191aD795E331CfFDb1b035D389f2aC516',
+        startBlock: 15278926,
       },
     ],
     coves: [

@@ -50,6 +50,59 @@ type Pool @entity(immutable: false) {
 
   # derived pool tokens
   tokens: [PoolToken!]! @derivedFrom(field: "pool")
+
+  # derived pool lp transfers
+  lpTransfersFrom: [PoolLpTransfer!]! @derivedFrom(field: "oldPool")
+  lpTransfersTo: [PoolLpTransfer!]! @derivedFrom(field: "newPool")
+
+  # derived pool vaults
+  vaults: [PoolVault!]! @derivedFrom(field: "pool")
+}
+
+type PoolLpTransfer @entity(immutable: true) {
+  id: Bytes!
+  oldPool: Pool!
+  newPool: Pool!
+  createdAt: Timestamp!
+}
+
+enum PoolVaultType {
+  PROTOCOL_DEPOSIT
+  FEE_SPLIT
+  FARM
+}
+
+type PoolVault @entity(immutable: true) {
+  id: Bytes!
+  pool: Pool!
+  type: PoolVaultType!
+  name: String
+
+  # when the vault is a farm
+  farm: PoolFarmVault
+  # when the vault is a protocol deposit
+  protocolDeposit: PoolProtocolDepositVault
+
+  createdAt: Timestamp!
+}
+
+enum PoolFarmVaultAbi {
+  LinearVestingVault
+  SplitFeeFarm
+}
+
+type PoolFarmVault @entity(immutable: true) {
+  id: Bytes!
+  vault: PoolVault!
+  rewardToken: Token!
+  farmingHelper: Bytes!
+  abi: PoolFarmVaultAbi!
+}
+
+type PoolProtocolDepositVault @entity(immutable: true) {
+  id: Bytes!
+  vault: PoolVault!
+  transferHelper: Bytes!
 }
 
 type PoolEvent @entity(timeseries: true) {

@@ -11,12 +11,27 @@ export function getOptimismDeploymentConfig(): Deployment {
         permitRouter: '0xF33141BC4E9D1d92a2Adba2fa27A09c2DA2AF3eB',
         contractAbiName: 'ClipperPackedVerifiedExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
+        vaults: [
+          {
+            type: 'FARM',
+            address: '0xAc2B3f9a13E7273639bcDCa55742391CDACC74cB',
+            farmingHelper: '0x55f7c152b0C3cc1cD7479e4858Ac07f50D7fcFAD',
+            startBlock: 107733812,
+            abi: 'LinearVestingVault',
+          },
+        ],
       },
       {
         address: '0xdbd4ffc32b34f630dd8ac18d37162ec8462db7db',
         startBlock: 3183055,
         contractAbiName: 'ClipperPackedExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
+      },
+    ],
+    lpTransfers: [
+      {
+        address: '0x8e7903CA4305d2864b8C360da137F900d315E867',
+        startBlock: 12747954,
       },
     ],
     coves: [

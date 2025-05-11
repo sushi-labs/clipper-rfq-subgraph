@@ -222,6 +222,14 @@ const ClipperCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
         file: './abis/AggregatorV3Interface.json',
       },
     ],
+    blockHandlers: [
+      {
+        handler: 'handlePoolStart',
+        filter: {
+          kind: 'once'
+        }
+      }
+    ],
     eventHandlers: [
       {
         event: 'Deposited(indexed address,uint256,uint256)',
@@ -371,14 +379,145 @@ const PriceOracleTemplate: Omit<DataSourceTemplate, 'network'> = {
   },
 }
 
+const VaultFarmTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'VaultFarm',
+  source: {
+    abi: 'LinearVestingVault',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['PoolVault', 'PoolFarmVault'],
+    abis: [
+      {
+        name: 'LinearVestingVault',
+        file: './abis/clipper-linear-vesting-vault.json',
+      },
+      {
+        name: 'ERC20',
+        file: './abis/ERC20.json',
+      },
+    ],
+    blockHandlers: [
+      {
+        handler: 'handleFarmStart',
+        filter: {
+          kind: 'once',
+        },
+      },
+    ],
+    eventHandlers: [],
+    file: './src/mappingVaultFarm.ts',
+  },
+}
+
+const VaultProtocolDepositTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'VaultProtocolDeposit',
+  source: {
+    abi: 'ClipperProtocolDeposit',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['PoolVault', 'PoolProtocolDepositVault'],
+    abis: [
+      {
+        name: 'ClipperProtocolDeposit',
+        file: './abis/ClipperProtocolDeposit.json',
+      },
+    ],
+
+    blockHandlers: [
+      {
+        handler: 'handleProtocolDepositStart',
+        filter: {
+          kind: 'once',
+        },
+      },
+    ],
+    eventHandlers: [],
+    file: './src/mappingVaultProtocolDeposit.ts',
+  },
+}
+
+const VaultFeeSplitTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'VaultFeeSplit',
+  source: {
+    abi: 'FeeSplit',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['PoolVault'],
+    abis: [
+      {
+        name: 'FeeSplit',
+        file: './abis/FeeSplit.json',
+      },
+    ],
+    blockHandlers: [
+      {
+        handler: 'handleFeeSplitStart',
+        filter: {
+          kind: 'once',
+        },
+      },
+    ],
+    eventHandlers: [],
+    file: './src/mappingVaultFeeSplit.ts',
+  },
+}
+
+const LpTransferTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'LpTransfer',
+  source: {
+    abi: 'LpTransfer',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['PoolLpTransfer'],
+    abis: [
+      {
+        name: 'LpTransfer',
+        file: './abis/LpTransfer.json',
+      },
+    ],
+    blockHandlers: [
+      {
+        handler: 'handleLpTransferStart',
+        filter: {
+          kind: 'once',
+        },
+      },
+    ],
+    eventHandlers: [],
+    file: './src/mappingLpTransfer.ts',
+  },
+}
+
 // Generates the SubgraphManifest object
 export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase): SubgraphManifest {
   const templates: DataSourceTemplate[] = [
     { network: config.networkName, ...ClipperCommonExchangeV0Template },
     { network: config.networkName, ...ClipperCoveTemplate },
     { network: config.networkName, ...PriceOracleTemplate },
+    { network: config.networkName, ...VaultFarmTemplate },
+    { network: config.networkName, ...VaultProtocolDepositTemplate },
+    { network: config.networkName, ...VaultFeeSplitTemplate },
+    { network: config.networkName, ...LpTransferTemplate },
   ]
   const dataSources: DataSource[] = []
+
+  // Add pool data sources
   for (const sourceAbi of PoolSourceAbiSet.values()) {
     if (sourceAbi === 'ClipperCommonExchangeV0') {
       for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0) {
@@ -404,10 +543,11 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
         }
 
         // Conditionally include the Transfer handler if needed
-        const finalEventHandlers = (pool.permitRouter || pool.feeSplit || pool.farmFeeSplit)
+        const finalEventHandlers =
+          pool.permitRouter || pool.feeSplit || pool.farmFeeSplit
             ? [...baseEventHandlers, transferEventHandler]
             : baseEventHandlers
-  
+
         dataSources.push({
           ...ClipperCommonExchangeV0Template,
           name: `${pool.contractAbiName}_${pool.address}`,
@@ -425,6 +565,50 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
             eventHandlers: finalEventHandlers,
           },
         })
+
+        for (const vault of pool.vaults || []) {
+          if (vault.type === 'FARM') {
+            dataSources.push({
+              ...VaultFarmTemplate,
+              name: `VaultFarm_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultFarmTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+              context: {
+                farmingHelper: { type: 'String', data: vault.farmingHelper },
+                abi: { type: 'String', data: vault.abi },
+              },
+            })
+          } else if (vault.type === 'PROTOCOL_DEPOSIT') {
+            dataSources.push({
+              ...VaultProtocolDepositTemplate,
+              name: `VaultProtocolDeposit_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultProtocolDepositTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+              context: {
+                transferHelper: { type: 'String', data: vault.transferHelper },
+              },
+            })
+          } else if (vault.type === 'FEE_SPLIT') {
+            dataSources.push({
+              ...VaultFeeSplitTemplate,
+              name: `VaultFeeSplit_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultFeeSplitTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+            })
+          }
+        }
       }
     }
   }
@@ -477,6 +661,21 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
       },
     })
   }
+
+  for (const lpTransfer of config.lpTransfers || []) {
+    dataSources.push({
+      ...LpTransferTemplate,
+      name: `LpTransfer_${lpTransfer.address}`,
+      network: config.networkName,
+      source: {
+        abi: LpTransferTemplate.source.abi,
+        address: lpTransfer.address,
+        startBlock: lpTransfer.startBlock,
+      },
+      mapping: LpTransferTemplate.mapping,
+    })
+  }
+
 
   // --- Assemble Manifest ---
   const manifest: SubgraphManifest = {

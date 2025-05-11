@@ -23,6 +23,12 @@ export function getMaticDeploymentConfig(): Deployment {
         sourceAbi: 'ClipperCommonExchangeV0',
       },
     ],
+    lpTransfers: [
+      {
+        address: '0x4715CCd2e0284CEDf7D5cC6b40420432EBc9E561',
+        startBlock: 28276941,
+      },
+    ],
     coves: [
       {
         address: '0x2370cB1278c948b606f789D2E5Ce0B41E90a756f',

@@ -18,6 +18,12 @@ export function getArbitrumDeploymentConfig(): Deployment {
         sourceAbi: 'ClipperCommonExchangeV0',
       },
     ],
+    lpTransfers: [
+      {
+        address: '0x4c16dD6e9b402Ea4FB5bE647Be2F49e3d59BB08A',
+        startBlock: 117185627,
+      },
+    ],
     coves: [
       {
         address: '0xB873921b1ADd94ea47Bf983B060CE812e97873df',

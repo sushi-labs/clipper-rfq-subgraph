@@ -56,7 +56,7 @@ export function handleDeposited(event: Deposited): void {
   pool.poolValueUSD = currentPoolLiquidity
 
   let poolEvent = new PoolEvent(0)
-  poolEvent.timestamp = timestamp.toI32();
+  poolEvent.timestamp = timestamp.toI32()
   poolEvent.pool = pool.id
   poolEvent.type = DEPOSIT_EVENT
   poolEvent.amountUSD = usdProportion
@@ -90,7 +90,7 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   newWithdrawal.withdrawer = withdrawer
 
   let poolEvent = new PoolEvent(0)
-  poolEvent.timestamp = event.block.timestamp.toI32();
+  poolEvent.timestamp = event.block.timestamp.toI32()
   poolEvent.pool = pool.id
   poolEvent.type = WITHDRAWAL_EVENT
   poolEvent.amountUSD = usdProportion
@@ -137,9 +137,7 @@ export function handleSwapped(event: Swapped): void {
   let amountOutUsd = outputPrice.times(amountOut)
   let transactionVolume = amountInUsd.plus(amountOutUsd).div(BigDecimal.fromString('2'))
 
-  let swap = new Swap(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
+  let swap = new Swap(event.transaction.hash.concatI32(event.logIndex.toI32()))
   let feeUSD: BigDecimal = BIG_DECIMAL_ZERO
   // Only calculate fee if both prices are available, otherwise the fee would equal the transaction volume
   if (inputTokenPrice && outputTokenPrice) {
@@ -213,20 +211,16 @@ export function handleSwapped(event: Swapped): void {
   poolTxSource.txCount = poolTxSource.txCount.plus(BIG_INT_ONE)
   poolTxSource.volumeUSD = poolTxSource.volumeUSD.plus(transactionVolume)
 
-  let workingPair = updatePair(
-    event.params.inAsset,
-    event.params.outAsset,
-    transactionVolume,
-  )
+  let workingPair = updatePair(event.params.inAsset, event.params.outAsset, transactionVolume)
   updatePoolPair(poolAddress, workingPair.id, transactionVolume)
   swap.pair = workingPair.id
   swap.sender = event.transaction.from
-  
+
   let isUniqueUser = upsertUser(event.transaction.from, event.block.timestamp, transactionVolume)
 
-  let theFraction = BIG_DECIMAL_ZERO;
+  let theFraction = BIG_DECIMAL_ZERO
   if (pool.poolTokensSupply.gt(BIG_INT_ZERO)) {
-      theFraction = pool.feeSplitPoolTokens.toBigDecimal().div(pool.poolTokensSupply.toBigDecimal());
+    theFraction = pool.feeSplitPoolTokens.toBigDecimal().div(pool.poolTokensSupply.toBigDecimal())
   }
   let daoRevenueFraction = event.block.timestamp.ge(BigInt.fromI32(1690848000))
     ? BigDecimal.fromString('1')
@@ -248,7 +242,7 @@ export function handleSwapped(event: Swapped): void {
   pool.poolValueUSD = currentPoolLiquidity
 
   let poolEvent = new PoolEvent(0)
-  poolEvent.timestamp = event.block.timestamp.toI32();
+  poolEvent.timestamp = event.block.timestamp.toI32()
   poolEvent.pool = poolAddress
   poolEvent.type = SWAP_EVENT
   poolEvent.swapFeeUSD = feeUSD
@@ -286,42 +280,28 @@ export function handleTransfer(event: Transfer): void {
     let context = dataSource.context()
     let poolContractAbiName = context.getString('contractAbiName')
     let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, event.block)
-    let pool = poolHelpers.loadPool() 
+    let pool = poolHelpers.loadPool()
 
     let fromIsFeeSplit = feeSplitAddresses.includes(event.params.from)
     let toIsFeeSplit = feeSplitAddresses.includes(event.params.to)
 
     // Update balance only if transfer is between fee split and non-fee split
     if (fromIsFeeSplit !== toIsFeeSplit) {
-      let transferAmount = event.params.value
-
-      if (toIsFeeSplit) {
-        // Tokens transferred TO a fee split address
-        pool.feeSplitPoolTokens = pool.feeSplitPoolTokens.plus(transferAmount)
-      } else {
-        // Tokens transferred FROM a fee split address
-        pool.feeSplitPoolTokens = pool.feeSplitPoolTokens.minus(transferAmount)
-      }
-      // Ensure balance doesn't go below zero due to potential initialization issues
-      if (pool.feeSplitPoolTokens.lt(BIG_INT_ZERO)) {
-        log.warning(
-          'Fee split token balance went below zero for pool {} ({}). Resetting from contract call. Tx: {}',
-          [
-            poolAddress.toHexString(),
-            pool.feeSplitPoolTokens.toString(),
-            event.transaction.hash.toHexString(),
-          ]
+      let currentTotalFeeSplitSupply = BIG_INT_ZERO
+      for (let i = 0; i < feeSplitAddresses.length; i++) {
+        currentTotalFeeSplitSupply = currentTotalFeeSplitSupply.plus(
+          eth_fetchBigIntTokenBalance(poolAddress, feeSplitAddresses[i]),
         )
-        // Recalculate total balance as a fallback if it goes negative
-        let currentTotalFeeSplitSupply = BIG_INT_ZERO
-        for (let i = 0; i < feeSplitAddresses.length; i++) {
-           currentTotalFeeSplitSupply = currentTotalFeeSplitSupply.plus(
-              eth_fetchBigIntTokenBalance(poolAddress, feeSplitAddresses[i])
-           )
-        }
-        pool.feeSplitPoolTokens = currentTotalFeeSplitSupply
       }
+      pool.feeSplitPoolTokens = currentTotalFeeSplitSupply
       pool.save()
     }
   }
+}
+
+export function handlePoolStart(block: ethereum.Block): void {
+  let context = dataSource.context()
+  let contractAbiName = context.getString('contractAbiName')
+  let poolHelpers = new PoolHelpers(dataSource.address(), contractAbiName, block)
+  poolHelpers.loadPool()
 }
