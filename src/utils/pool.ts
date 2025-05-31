@@ -54,7 +54,7 @@ export class PoolHelpers {
       if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
         for (let i = 0; i < feeSplitAddresses.length; i++) {
           initialFeeSplitSupply = initialFeeSplitSupply.plus(
-            eth_fetchBigIntTokenBalance(this.poolAddress, feeSplitAddresses[i])
+            eth_fetchBigIntTokenBalance(this.poolAddress, feeSplitAddresses[i]),
           )
         }
       }
@@ -97,20 +97,16 @@ export class PoolHelpers {
    * @returns The balance of all tokens in the pool
    */
   eth_getPoolAllTokensBalance(): ClipperDirectExchangeV1__allTokensBalanceResult {
-    // ClipperDirectExchangeV0 does not have the allTokensBalance function
-    if (this.sourceAbi !== 'ClipperDirectExchangeV0') {
-      let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
-      let allTokensBalanceResult = poolContract.try_allTokensBalance()
-      if (!allTokensBalanceResult.reverted) {
-        return allTokensBalanceResult.value
-      }
-      log.warning('Failed to get all tokens balance for pool {}. Using fallback method of multiple calls.', [
-        this.poolAddress.toHexString(),
-      ])
+    let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
+    let allTokensBalanceResult = poolContract.try_allTokensBalance()
+    if (!allTokensBalanceResult.reverted) {
+      return allTokensBalanceResult.value
     }
+    log.warning('Failed to get all tokens balance for pool {}. Using fallback method of multiple calls.', [
+      this.poolAddress.toHexString(),
+    ])
 
     // totalSupply and balanceOf are supported by both ClipperDirectExchangeV0 and ClipperDirectExchangeV1
-    let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
     let pool = this.loadPool()
     let poolTokens = pool.tokens.load()
     let poolTokenBalances = new Array<BigInt>()
