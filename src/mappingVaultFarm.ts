@@ -12,13 +12,24 @@ export function handleFarmStart(block: ethereum.Block): void {
   const farmingHelper = Address.fromString(farmingHelperString)
   const contractAddress = dataSource.address()
 
+  const name = nameValue != null ? nameValue.toString() : null
+  createFarmVaultEntity(contractAddress, farmingHelper, abi, name, block)
+}
+
+export function createFarmVaultEntity(
+  contractAddress: Address,
+  farmingHelper: Address,
+  abi: string,
+  name: string | null,
+  block: ethereum.Block
+): void {
   const farmContract = LinearVestingVault.bind(contractAddress)
 
   const vault = new PoolVault(contractAddress)
   vault.pool = farmContract.STAKING_TOKEN()
   vault.type = FARM_VAULT_TYPE
   vault.createdAt = block.timestamp.toI32()
-  vault.name = nameValue != null ? nameValue.toString() : null
+  vault.name = name
   vault.farm = contractAddress
   vault.save()
 

@@ -1,4 +1,4 @@
-import { BigDecimal, BigInt, Bytes, dataSource, ethereum, log } from '@graphprotocol/graph-ts'
+import { BigDecimal, BigInt, Bytes, dataSource, ethereum, log, Address, TypedMapEntry } from '@graphprotocol/graph-ts'
 import {
   AssetWithdrawn,
   Deposited,
@@ -6,8 +6,8 @@ import {
   Transfer,
   Withdrawn,
 } from '../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
-import { Deposit, PoolEvent, Swap, Withdrawal } from '../types/schema'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
+import { Deposit, PoolEvent, Swap, Withdrawal, PoolVault, PoolLpTransfer } from '../types/schema'
+import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT, FARM_VAULT_TYPE, PROTOCOL_DEPOSIT_VAULT_TYPE, FEE_SPLIT_VAULT_TYPE } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
 import { upsertUser } from './entities/User'
 import {
@@ -18,9 +18,13 @@ import {
   loadTransactionSource,
 } from './utils'
 import { getTokenUsdPrice } from './utils/prices'
-import { ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
+import { LpTransfers, ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool, VaultsByPool, LpTransferInfo } from './addresses'
 import { PoolHelpers } from './utils/pool'
 import { eth_fetchBigIntTokenBalance } from './utils/token'
+import { createFarmVaultEntity } from './mappingVaultFarm'
+import { createProtocolDepositVaultEntity } from './mappingVaultProtocolDeposit'
+import { createFeeSplitVaultEntity } from './mappingVaultFeeSplit'
+import { createLpTransferEntity } from './mappingLpTransfer'
 
 export function handleDeposited(event: Deposited): void {
   let timestamp = event.block.timestamp
@@ -73,6 +77,13 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   let poolContractAbiName = context.getString('contractAbiName')
   let poolHelpers = new PoolHelpers(event.address, poolContractAbiName, event.block)
   let pool = poolHelpers.loadPool()
+  
+  // Create vaults if they don't exist yet (workaround for block handler bug)
+  ensureVaultsExist(event.address, event.block)
+  
+  // Create LP transfers if they don't exist yet (workaround for block handler bug)
+  ensureLpTransfersExist(event.address, event.block)
+  
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
   let poolTokenSupply = pool.poolTokensSupply.minus(poolTokensWithdrawn)
@@ -105,6 +116,56 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   poolEvent.save()
   newWithdrawal.save()
   pool.save()
+}
+
+function ensureVaultsExist(poolAddress: Address, block: ethereum.Block): void {
+  let vaults = VaultsByPool.get(poolAddress)
+  if (vaults === null) {
+    return
+  }
+  
+  for (let i = 0; i < vaults.length; i++) {
+    let vaultInfo = vaults[i]
+    
+    // Only create vault if we've passed its start block
+    if (block.number.toI32() < vaultInfo.startBlock) {
+      continue
+    }
+    
+    let vault = PoolVault.load(vaultInfo.address)
+    
+    if (vault === null) {
+      if (vaultInfo.type === FARM_VAULT_TYPE) {
+        let farmingHelper = vaultInfo.farmingHelper !== null ? vaultInfo.farmingHelper! : Address.zero()
+        let abi = vaultInfo.abi !== null ? vaultInfo.abi! : ''
+        createFarmVaultEntity(vaultInfo.address, farmingHelper, abi, null, block)
+      } else if (vaultInfo.type === PROTOCOL_DEPOSIT_VAULT_TYPE) {
+        let transferHelper = vaultInfo.transferHelper !== null ? vaultInfo.transferHelper! : Address.zero()
+        createProtocolDepositVaultEntity(vaultInfo.address, transferHelper, null, block)
+      } else if (vaultInfo.type === FEE_SPLIT_VAULT_TYPE) {
+        createFeeSplitVaultEntity(vaultInfo.address, null, block)
+      }
+    }
+  }
+}
+
+function ensureLpTransfersExist(poolAddress: Address, block: ethereum.Block): void {
+  // Check all LP transfers since we don't have a pool mapping
+  
+  for (let i = 0; i < LpTransfers.entries.length; i++) {
+    let entry = LpTransfers.entries[i]
+    let lpTransferInfo = entry.value
+    
+    if (block.number.toI32() < lpTransferInfo.startBlock) {
+      continue
+    }
+    
+    let lpTransfer = PoolLpTransfer.load(lpTransferInfo.address)
+    
+    if (lpTransfer === null) {
+      createLpTransferEntity(lpTransferInfo.address, block)
+    }
+  }
 }
 
 export function handleWithdrawn(event: Withdrawn): void {

@@ -197,6 +197,13 @@ yargs(hideBin(process.argv))
               return options.inverse(this)
             }
           })
+          handlebars.registerHelper('eq', function(a: any, b: any, options: any) {
+            if (a === b) {
+              return options.fn(this)
+            } else {
+              return options.inverse(this)
+            }
+          })
           const compile = handlebars.compile(templateContent)
           // Use the specifically prepared handlebarsData
           const replaced = compile(manifestBase)
