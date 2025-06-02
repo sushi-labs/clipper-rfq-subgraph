@@ -6,7 +6,7 @@ import {
   Transfer,
   Withdrawn,
 } from '../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
-import { Deposit, PoolEvent, Swap, Withdrawal, PoolVault, PoolLpTransfer } from '../types/schema'
+import { Deposit, PoolEvent, Swap, Withdrawal, PoolVault, PoolLpTransfer, PriceAggregatorProxy } from '../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT, FARM_VAULT_TYPE, PROTOCOL_DEPOSIT_VAULT_TYPE, FEE_SPLIT_VAULT_TYPE } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
 import { upsertUser } from './entities/User'
@@ -18,13 +18,14 @@ import {
   loadTransactionSource,
 } from './utils'
 import { getTokenUsdPrice } from './utils/prices'
-import { LpTransfers, ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool, VaultsByPool, LpTransferInfo } from './addresses'
+import { LpTransfers, ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool, VaultsByPool, PriceOracleProxies } from './addresses'
 import { PoolHelpers } from './utils/pool'
 import { eth_fetchBigIntTokenBalance } from './utils/token'
 import { createFarmVaultEntity } from './mappingVaultFarm'
 import { createProtocolDepositVaultEntity } from './mappingVaultProtocolDeposit'
 import { createFeeSplitVaultEntity } from './mappingVaultFeeSplit'
 import { createLpTransferEntity } from './mappingLpTransfer'
+import { createPriceOracleProxyEntity } from './oracleMapping'
 
 export function handleDeposited(event: Deposited): void {
   let timestamp = event.block.timestamp
@@ -83,6 +84,9 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   
   // Create LP transfers if they don't exist yet (workaround for block handler bug)
   ensureLpTransfersExist(event.address, event.block)
+  
+  // Create price oracle proxies if they don't exist yet (workaround for block handler bug)
+  ensurePriceOracleProxiesExist(event.address, event.block)
   
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
@@ -164,6 +168,26 @@ function ensureLpTransfersExist(poolAddress: Address, block: ethereum.Block): vo
     
     if (lpTransfer === null) {
       createLpTransferEntity(lpTransferInfo.address, block)
+    }
+  }
+}
+
+function ensurePriceOracleProxiesExist(poolAddress: Address, block: ethereum.Block): void {
+  // Check all price oracle proxies since they're global
+  for (let i = 0; i < PriceOracleProxies.entries.length; i++) {
+    let entry = PriceOracleProxies.entries[i]
+    let proxyInfo = entry.value
+    
+    // Only create proxy if we've passed its start block
+    if (block.number.toI32() < proxyInfo.startBlock) {
+      continue
+    }
+    
+    // Check if the price aggregator proxy already exists
+    let existingProxy = PriceAggregatorProxy.load(proxyInfo.address)
+    
+    if (existingProxy === null) {
+      createPriceOracleProxyEntity(proxyInfo.address, proxyInfo.tokenAddress, block)
     }
   }
 }
