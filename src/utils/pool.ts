@@ -1,47 +1,181 @@
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
-import { loadToken } from '.'
-import { ClipperDirectExchange } from '../../types/ClipperDirectExchange/ClipperDirectExchange'
-import { getUsdPrice } from './prices'
-import { fetchTokenBalance } from './token'
+import { Address, BigDecimal, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
+import { convertTokenToDecimal, loadOrCreatePoolToken, loadToken } from './index'
+import {
+  ClipperDirectExchangeV1,
+  ClipperDirectExchangeV1__allTokensBalanceResult,
+} from '../../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
+import { Pool, PoolToken } from '../../types/schema'
+import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
+import { ClipperFeeSplitAddressesByPool } from '../addresses'
+import { eth_fetchBigIntTokenBalance } from './token'
 
-export function getCurrentPoolLiquidity(poolId: string): BigDecimal {
-  let poolAddress = Address.fromString(poolId)
-  let poolContract = ClipperDirectExchange.bind(poolAddress)
-  let nTokens = poolContract.nTokens()
-  let currentLiquidity = BigDecimal.fromString('0')
+export class PoolHelpers {
+  private poolAddress: Address
+  private sourceAbi: string
+  private block: ethereum.Block
 
-  if (Address.fromHexString(poolId).equals(Address.fromHexString('0xCE37051a3e60587157DC4c0391B4C555c6E68255'))) {
-    let hardcodedLiquidity = BigDecimal.fromString('550000')
-    log.info('Setting hardcoded liquidity to {}', [hardcodedLiquidity.toString()])
-    return hardcodedLiquidity
+  constructor(poolAddress: Address, sourceAbi: string, block: ethereum.Block) {
+    this.poolAddress = poolAddress
+    this.sourceAbi = sourceAbi
+    this.block = block
   }
 
-  log.info('fetching liquidity from tokens', [])
-  for (let i: i32 = 0; i < nTokens.toI32(); i++) {
-    let nToken = poolContract.try_tokenAt(BigInt.fromI32(i))
-    if (!nToken.reverted) {
-      let token = loadToken(nToken.value)
-      let tokenBalance = fetchTokenBalance(token, poolAddress)
-      let tokenUsdPrice = getUsdPrice(token.symbol)
-      let usdTokenLiquidity = tokenBalance.times(tokenUsdPrice)
-  
-      currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
-  
-      token.tvl = tokenBalance
-      token.tvlUSD = tokenUsdPrice
-      token.save()
-    } else {
-      log.info('Not able to fetch nToken {}', [i.toString()])
+  loadPool(): Pool {
+    let pool = Pool.load(this.poolAddress)
+
+    if (!pool) {
+      pool = new Pool(this.poolAddress)
+      pool.abi = this.sourceAbi
+      pool.createdAt = this.block.timestamp.toI32()
+      // swaps
+      pool.volumeUSD = BIG_DECIMAL_ZERO
+      pool.txCount = BIG_INT_ZERO
+
+      pool.feeUSD = BIG_DECIMAL_ZERO
+      pool.revenueUSD = BIG_DECIMAL_ZERO
+
+      //deposits
+      pool.depositedUSD = BIG_DECIMAL_ZERO
+      pool.depositCount = BIG_INT_ZERO
+
+      // withdrawals
+      pool.withdrewUSD = BIG_DECIMAL_ZERO
+      pool.withdrawalCount = BIG_INT_ZERO
+
+      // pool value in USD
+      pool.poolValueUSD = BIG_DECIMAL_ZERO
+
+      pool.poolTokensSupply = this.eth_getPoolTokenSupply()
+      pool.uniqueUsers = BIG_INT_ZERO
+
+      // Initialize fee split token balance
+      let feeSplitAddresses = ClipperFeeSplitAddressesByPool.get(this.poolAddress)
+      let initialFeeSplitSupply = BIG_INT_ZERO
+      if (feeSplitAddresses !== null && feeSplitAddresses.length > 0) {
+        for (let i = 0; i < feeSplitAddresses.length; i++) {
+          initialFeeSplitSupply = initialFeeSplitSupply.plus(
+            eth_fetchBigIntTokenBalance(this.poolAddress, feeSplitAddresses[i]),
+          )
+        }
+      }
+      pool.feeSplitPoolTokens = initialFeeSplitSupply
+
+      pool.save()
+
+      this.eth_loadOrCreatePoolTokens()
     }
+
+    return pool as Pool
   }
 
-  return currentLiquidity
-}
+  /**
+   * Load or create pool tokens.
+   * Only used when creating a pool entity. Cached in Pool entities.
+   * @returns An array of pool tokens
+   */
+  eth_loadOrCreatePoolTokens(): PoolToken[] {
+    // Supported by both ClipperDirectExchangeV0 and ClipperDirectExchangeV1
+    let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
+    let nTokens = poolContract.nTokens()
+    let poolTokens: PoolToken[] = []
+    for (let i = 0; i < nTokens.toI32(); i++) {
+      let nToken = poolContract.try_tokenAt(BigInt.fromI32(i))
+      if (!nToken.reverted) {
+        let token = loadToken(nToken.value, this.block)
+        let poolToken = loadOrCreatePoolToken(this.poolAddress, token, this.block)
+        poolTokens.push(poolToken)
+      } else {
+        log.info('Not able to fetch nToken {}', [i.toString()])
+      }
+    }
 
-export function getPoolTokenSupply(poolId: string): BigInt {
-  let poolAddress = Address.fromString(poolId)
-  let poolContract = ClipperDirectExchange.bind(poolAddress)
-  let poolTokenSupply = poolContract.totalSupply()
+    return poolTokens
+  }
 
-  return poolTokenSupply
+  /**
+   * Get the balance of all tokens in the pool.
+   * @returns The balance of all tokens in the pool
+   */
+  eth_getPoolAllTokensBalance(): ClipperDirectExchangeV1__allTokensBalanceResult {
+    let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
+    let allTokensBalanceResult = poolContract.try_allTokensBalance()
+    if (!allTokensBalanceResult.reverted) {
+      return allTokensBalanceResult.value
+    }
+    log.warning('Failed to get all tokens balance for pool {}. Using fallback method of multiple calls.', [
+      this.poolAddress.toHexString(),
+    ])
+
+    // totalSupply and balanceOf are supported by both ClipperDirectExchangeV0 and ClipperDirectExchangeV1
+    let pool = this.loadPool()
+    let poolTokens = pool.tokens.load()
+    let poolTokenBalances = new Array<BigInt>()
+    let poolTokenAddresses = new Array<Address>()
+    for (let i = 0; i < poolTokens.length; i++) {
+      let tokenAddress = Address.fromBytes(poolTokens[i].token)
+      poolTokenAddresses.push(tokenAddress)
+      poolTokenBalances.push(poolContract.balanceOf(tokenAddress))
+    }
+    let allTokensBalance = new ClipperDirectExchangeV1__allTokensBalanceResult(
+      poolTokenBalances,
+      poolTokenAddresses,
+      poolContract.totalSupply(),
+    )
+    return allTokensBalance
+  }
+
+  /**
+   * Update the liquidity of the pool tokens.
+   * Supports adding new tokens to the pool as the balances come from the pool assets set.
+   * @param allTokensBalance - The balance of all tokens in the pool
+   * @returns The liquidity of the pool tokens
+   */
+  updatePoolTokensLiquidity(allTokensBalance: ClipperDirectExchangeV1__allTokensBalanceResult): BigDecimal {
+    let currentLiquidity = BIG_DECIMAL_ZERO
+    for (let i: i32 = 0; i < allTokensBalance.value0.length; i++) {
+      let tokenAddress = allTokensBalance.value1[i]
+      const token = loadToken(tokenAddress, this.block)
+      let tokenBalance = convertTokenToDecimal(allTokensBalance.value0[i], token.decimals)
+      const poolToken = loadOrCreatePoolToken(this.poolAddress, token, this.block)
+      let priceUSD = token.priceUSD
+      const usdTokenLiquidity = priceUSD ? tokenBalance.times(priceUSD) : BIG_DECIMAL_ZERO
+      currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
+      poolToken.tvl = tokenBalance
+      poolToken.tvlUSD = usdTokenLiquidity
+      poolToken.save()
+    }
+
+    return currentLiquidity
+  }
+
+  updateExistingPoolTokensLiquidity(): BigDecimal {
+    let pool = this.loadPool()
+    let poolTokens = pool.tokens.load()
+    let currentLiquidity = BIG_DECIMAL_ZERO
+    for (let i: i32 = 0; i < poolTokens.length; i++) {
+      let poolToken = poolTokens[i]
+      let tokenAddress = Address.fromBytes(poolToken.token)
+      let token = loadToken(tokenAddress, this.block)
+      let priceUSD = token.priceUSD
+      const usdTokenLiquidity = priceUSD ? poolToken.tvl.times(priceUSD) : BIG_DECIMAL_ZERO
+      if (usdTokenLiquidity.notEqual(poolToken.tvlUSD)) {
+        poolToken.tvlUSD = usdTokenLiquidity
+        poolToken.save()
+      }
+      currentLiquidity = currentLiquidity.plus(usdTokenLiquidity)
+    }
+    return currentLiquidity
+  }
+
+  /*
+    Get the total supply of the pool token.
+    @returns The total supply of the pool token
+  */
+  eth_getPoolTokenSupply(): BigInt {
+    // totalSupply is supported by both ClipperDirectExchangeV0 and ClipperDirectExchangeV1
+    let poolContract = ClipperDirectExchangeV1.bind(this.poolAddress)
+    let poolTokenSupply = poolContract.totalSupply()
+
+    return poolTokenSupply
+  }
 }

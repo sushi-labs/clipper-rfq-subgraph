@@ -1,37 +1,23 @@
-enum TokenType {
-  SHORTTAIL
-  LONGTAIL
-}
-
 enum SwapType {
   COVE
   POOL
 }
 
-enum StatusHistoricType {
-  HOURLY
-  DAILY
-}
-
-type Pool @entity {
+type Pool @entity(immutable: false) {
   # pool address
-  id: ID!
+  id: Bytes!
+  # abi name
+  abi: String!
+  createdAt: Timestamp!
   # all time USD swapped
   volumeUSD: BigDecimal!
-  # Average trade amount of all time in USD
-  avgTrade: BigDecimal!
   # all time number of transactions
   txCount: BigInt!
   # all time fee collected in USD
   feeUSD: BigDecimal!
-  # Average trade fee of all time in USD
-  avgTradeFee: BigDecimal
-  avgFeeInBps: BigDecimal!
 
   # all time deposits count
   depositCount: BigInt!
-  # Average deposit amount of all time in USD
-  avgDeposit: BigDecimal!
   # all time deposited amount in USD
   depositedUSD: BigDecimal!
   # total revenue made by clipper fee split
@@ -39,130 +25,237 @@ type Pool @entity {
 
   # all time withdrawals count
   withdrawalCount: BigInt!
-  # Average withdrawal amount of all time in USD
-  avgWithdraw: BigDecimal!
   # all time withdrew amount in USD
   withdrewUSD: BigDecimal!
+
+  # current pool liquidity in USD
+  poolValueUSD: BigDecimal!
 
   # number of all time unique users
   uniqueUsers: BigInt!
   # number of pool tokens supplied by the smart contract (used for time-travel queries)
   poolTokensSupply: BigInt!
-  # time snapshots of pool data
-  dailyHistory: [DailyPoolStatus!]! @derivedFrom(field: "pool")
-  hourlyHistory: [HourlyPoolStatus!]! @derivedFrom(field: "pool")
+
+  # Current total pool tokens held by fee split addresses
+  feeSplitPoolTokens: BigInt!
+
+  # derived pool transaction sources
+  transactionSources: [PoolTransactionSource!]! @derivedFrom(field: "pool")
+
+  # derived pool pairs
+  pairs: [PoolPair!]! @derivedFrom(field: "pool")
+
+  # derived pool coves
+  coves: [Cove!]! @derivedFrom(field: "pool")
+
+  # derived pool tokens
+  tokens: [PoolToken!]! @derivedFrom(field: "pool")
+
+  # derived pool lp transfers
+  lpTransfersFrom: [PoolLpTransfer!]! @derivedFrom(field: "oldPool")
+  lpTransfersTo: [PoolLpTransfer!]! @derivedFrom(field: "newPool")
+
+  # derived pool vaults
+  vaults: [PoolVault!]! @derivedFrom(field: "pool")
 }
 
-type DailyPoolStatus @entity {
-  id: ID!
-  from: BigInt!
-  to: BigInt!
+type PoolLpTransfer @entity(immutable: true) {
+  id: Bytes!
+  oldPool: Pool!
+  newPool: Pool!
+  createdAt: Timestamp!
+}
+
+enum PoolVaultType {
+  PROTOCOL_DEPOSIT
+  FEE_SPLIT
+  FARM
+}
+
+type PoolVault @entity(immutable: true) {
+  id: Bytes!
   pool: Pool!
-  # snapshot of number of pool tokens supplied by the smart contract
+  type: PoolVaultType!
+  name: String
+
+  # when the vault is a farm
+  farm: PoolFarmVault
+  # when the vault is a protocol deposit
+  protocolDeposit: PoolProtocolDepositVault
+
+  createdAt: Timestamp!
+}
+
+enum PoolFarmVaultAbi {
+  LinearVestingVault
+  SplitFeeFarm
+}
+
+type PoolFarmVault @entity(immutable: true) {
+  id: Bytes!
+  vault: PoolVault!
+  rewardToken: Token!
+  farmingHelper: Bytes!
+  abi: PoolFarmVaultAbi!
+}
+
+type PoolProtocolDepositVault @entity(immutable: true) {
+  id: Bytes!
+  vault: PoolVault!
+  transferHelper: Bytes!
+}
+
+type PoolEvent @entity(timeseries: true) {
+  # Auto-incremented ID
+  id: Int8!
+  # Block timestamp, automatically set
+  timestamp: Timestamp!
+  # Dimension: The pool this event relates to
+  pool: Pool!
+  # Type of event:  0 = "DEPOSIT", 1 = "WITHDRAWAL", 2 = "SWAP", 3 = "ORACLE_UPDATE"
+  type: Int8!
+  # Volume of the swap (USD) - only for SWAP events
+  swapVolumeUSD: BigDecimal
+  # Fee collected from the swap (USD) - only for SWAP events
+  swapFeeUSD: BigDecimal
+  # Revenue made by clipper fee split (USD) - only for SWAP events
+  swapRevenueUSD: BigDecimal
+  # Amount deposited or withdrawn (USD) - only for DEPOSIT/WITHDRAWAL events
+  amountUSD: BigDecimal
+  # Snapshot of pool liquidity value at the time of the event
+  poolValueUSD: BigDecimal!
+  # Snapshot of pool token supply at the time of the event
   poolTokensSupply: BigInt!
-
-  # number of transactions during period
-  txCount: BigInt!
-  # volume in USD
-  volumeUSD: BigDecimal!
-  # Average trade amount in USD
-  avgTrade: BigDecimal!
-  # fee collected in USD
-  feeUSD: BigDecimal!
-  # Average trade fee in USD
-  avgTradeFee: BigDecimal
-  avgFeeInBps: BigDecimal!
-  # total revenue made by clipper fee split
-  revenueUSD: BigDecimal!
-
-  # number of deposits during daily period
-  depositCount: BigInt!
-  # deposited amount during daily period
-  depositedUSD: BigDecimal!
-  # Average deposited amount of USD during daily period
-  avgDeposit: BigDecimal!
-
-  # number of withdrawals during daily period
-  withdrawalCount: BigInt!
-  # withdrew amount during daily period
-  withdrewUSD: BigDecimal!
-  # Average withdrawal amount of USD during daily period
-  avgWithdraw: BigDecimal!
-  ## pool liquidity value at the beginning of the day
-  poolValue: BigDecimal!
 }
 
-type HourlyPoolStatus @entity {
-  id: ID!
-  from: BigInt!
-  to: BigInt!
+"""
+Aggregated daily status computed from PoolEvent.
+Retains original name for compatibility, but structure differs due to aggregation limitations.
+Fields like averages (avgTrade, avgDeposit etc.) must be calculated client-side.
+"""
+type PoolStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
+  # Aggregation ID (auto-managed, Int8! type)
+  id: Int8!
+  # Start timestamp of the aggregation interval (Timestamp! type)
+  timestamp: Timestamp!
+  # Dimension: Pool ID
   pool: Pool!
-
-  # number of transactions during daily period
-  txCount: BigInt!
-  # volume in USD
-  volumeUSD: BigDecimal!
-  # Average trade amount of USD during hourly period
-  avgTrade: BigDecimal!
-  # fee collected in USD
-  feeUSD: BigDecimal!
-  # Average trade fee in USD
-  avgTradeFee: BigDecimal
-  avgFeeInBps: BigDecimal!
-
-  # number of deposits during hourly period
-  depositCount: BigInt!
-  # deposited amount during hourly period
-  depositedUSD: BigDecimal!
-  # Average deposited amount of USD during hourly period
-  avgDeposit: BigDecimal!
-
-  # number of withdrawals during hourly period
-  withdrawalCount: BigInt!
-  # withdrew amount during hourly period
-  withdrewUSD: BigDecimal!
-  # Average withdrawal amount of USD during hourly period
-  avgWithdraw: BigDecimal!
+  # Total volume (USD) from swaps in the interval
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  # Total fees (USD) from swaps in the interval
+  feeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapFeeUSD else 0 end")
+  # Total number of events in the interval, ignoring oracle updates (Int8! type) 
+  txCount: Int8! @aggregate(fn: "sum", arg: "case when type != 3 then 1 else 0 end")
+  # Number of swaps in the interval (Int8! type) - useful for client-side avg calculation
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  # Number of deposits in the interval (Int8! type)
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  # Total deposited amount (USD) in the interval
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  # Number of withdrawals in the interval (Int8! type)
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  # Total withdrawn amount (USD) in the interval
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+  # First recorded pool liquidity value in the interval
+  initialpoolValueUSD: BigDecimal! @aggregate(fn: "first", arg: "poolValueUSD")
+  # First recorded pool token supply in the interval
+  initialPoolTokensSupply: BigInt! @aggregate(fn: "first", arg: "poolTokensSupply")
+  # Last recorded pool liquidity value in the interval
+  poolValueUSD: BigDecimal! @aggregate(fn: "last", arg: "poolValueUSD")
+  # Last recorded pool token supply in the interval
+  poolTokensSupply: BigInt! @aggregate(fn: "last", arg: "poolTokensSupply")
+  # Revenue made by clipper fee split (USD)
+  revenueUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapRevenueUSD else 0 end")
 }
 
-type Token @entity {
+type PoolsStats @aggregation(intervals: ["day", "hour"], source: "PoolEvent") {
+  # Aggregation ID (auto-managed, Int8! type)
+  id: Int8!
+  # Start timestamp of the aggregation interval (Timestamp! type)
+  timestamp: Timestamp!
+  # Total volume (USD) from swaps in the interval
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  # Total fees (USD) from swaps in the interval
+  feeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapFeeUSD else 0 end")
+  # Total number of events in the interval, ignoring oracle updates (Int8! type) 
+  txCount: Int8! @aggregate(fn: "sum", arg: "case when type != 3 then 1 else 0 end")
+  # Number of swaps in the interval (Int8! type) - useful for client-side avg calculation
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  # Number of deposits in the interval (Int8! type)
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  # Total deposited amount (USD) in the interval
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  # Number of withdrawals in the interval (Int8! type)
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  # Total withdrawn amount (USD) in the interval
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+  # Revenue made by clipper fee split (USD)
+  revenueUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapRevenueUSD else 0 end")
+}
+
+enum TokenPriceSource {
+  ORACLE
+  SNAPSHOT
+  COVE
+}
+
+type Token @entity(immutable: false) {
   # token address
-  id: ID!
+  id: Bytes!
   # token symbol
   symbol: String!
   # token name
   name: String!
   # token decimals
-  decimals: BigInt!
+  decimals: Int!
   # transactions across all pools that include this token
   txCount: BigInt!
   # volume in token units
   volume: BigDecimal!
   # volume in derived USD
   volumeUSD: BigDecimal!
-  # total value locked in pool (supports additional pools)
-  tvl: BigDecimal!
-  # total value locked from derived usd
-  tvlUSD: BigDecimal!
   # total amount deposited in pool
   deposited: BigDecimal!
   # total amount in USD deposited in pool
   depositedUSD: BigDecimal!
-  # type of token (longtail or shorttail)
-  type: TokenType
-  # if type is longtail, cove should be set
-  cove: Cove
+  # price of the token in USD
+  priceUSD: BigDecimal
+  priceSource: TokenPriceSource
+  priceAggregatorProxy: PriceAggregatorProxy
+  # last price update timestamp
+  priceUpdatedAt: Timestamp
+
+  pools: [PoolToken!]! @derivedFrom(field: "token")
+}
+
+type PriceAggregatorProxy @entity(immutable: false) {
+  id: Bytes!
+  aggregator: Bytes!
+  aggregatorLastCheckedAt: Timestamp!
+  aggregatorConfirmedAt: Timestamp!
+  tokens: [Token!]! @derivedFrom(field: "priceAggregatorProxy")
+}
+
+type PoolToken @entity(immutable: false) {
+  id: Bytes!
+  pool: Pool!
+  token: Token!
+  createdAt: Timestamp!
+  # total value locked in pool (supports additional pools)
+  tvl: BigDecimal!
+  # total value locked from derived usd
+  tvlUSD: BigDecimal!
 }
 
 type Swap @entity(immutable: true) {
   # transaction hash + "-" + event log index
-  id: ID!
+  id: Bytes!
   # pointer to the pool
   pool: Pool
   # pointer to transaction
   transaction: Bytes!
   # timestamp of transaction
-  timestamp: BigInt!
+  timestamp: Timestamp!
   # allow indexing by tokens
   inToken: Token!
   # allow indexing by tokens
@@ -181,6 +274,7 @@ type Swap @entity(immutable: true) {
   amountInUSD: BigDecimal!
   amountOutUSD: BigDecimal!
   feeUSD: BigDecimal!
+  revenueUSD: BigDecimal!
 
   pricePerInputToken: BigDecimal!
   pricePerOutputToken: BigDecimal!
@@ -199,9 +293,9 @@ type Swap @entity(immutable: true) {
   amountOutRaw: BigInt!
 }
 
-type Pair @entity {
+type Pair @entity(immutable: false) {
   # asset 1 + asset 2 address
-  id: ID!
+  id: Bytes!
   # asset 0 of the pair
   asset0: Token!
   # asset 1 of the pair
@@ -212,26 +306,58 @@ type Pair @entity {
   volumeUSD: BigDecimal!
   # swaps data
   swaps: [Swap!]! @derivedFrom(field: "pair")
+  # derived pool pairs
+  pools: [PoolPair!]! @derivedFrom(field: "pair")
 }
 
-type TransactionSource @entity {
+type PoolPair @entity(immutable: false) {
+  id: Bytes!
+  pool: Pool!
+  pair: Pair!
+  # all time transaction on this pair
+  txCount: BigInt!
+  # volume of all time transactions in USD
+  volumeUSD: BigDecimal!
+}
+
+type TransactionSource @entity(immutable: false) {
   # origin name
   id: ID!
   # number of all time transactions by source
   txCount: BigInt!
+  # volume of all time transactions in USD
+  volumeUSD: BigDecimal!
   # derived swaps
   swaps: [Swap!]! @derivedFrom(field: "transactionSource")
+  # derived pool transaction sources
+  pools: [PoolTransactionSource!]! @derivedFrom(field: "transactionSource")
 }
 
-type User @entity {
-  # wallet address
+type PoolTransactionSource @entity(immutable: false) {
   id: ID!
+  pool: Pool!
+  txCount: BigInt!
+  volumeUSD: BigDecimal!
+  transactionSource: TransactionSource!
+}
+
+type CoveTransactionSource @entity(immutable: false) {
+  id: ID!
+  cove: Cove!
+  transactionSource: TransactionSource!
+  txCount: BigInt!
+  volumeUSD: BigDecimal!
+}
+
+type User @entity(immutable: false) {
+  # wallet address
+  id: Bytes!
   # number of all time transactions by user
   txCount: BigInt!
   # timestamp of first transaction
-  firstTxTimestamp: BigInt!
+  firstTxTimestamp: Timestamp!
   # timestamp of last transaction
-  lastTxTimestamp: BigInt!
+  lastTxTimestamp: Timestamp!
   # total volume trade by user
   volumeUSD: BigDecimal!
   # list of trades made by the user
@@ -239,9 +365,9 @@ type User @entity {
 }
 
 type Deposit @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   # timestamp of transaction
-  timestamp: BigInt!
+  timestamp: Timestamp!
   # pool deposited to
   pool: Pool!
   # pool tokens received by the deposit
@@ -253,17 +379,17 @@ type Deposit @entity(immutable: true) {
 }
 
 type CoveDeposit @entity(immutable: true) {
-  id: ID!
-  timestamp: BigInt!
+  id: Bytes!
+  timestamp: Timestamp!
   cove: Cove!
   amountUsd: BigDecimal!
   depositor: Bytes!
 }
 
 type Withdrawal @entity(immutable: true) {
-  id: ID!
+  id: Bytes!
   # timestamp of transaction
-  timestamp: BigInt!
+  timestamp: Timestamp!
   # pool to where the whitdrawal was done
   pool: Pool!
   # Pool tokens burned to withdraw
@@ -275,35 +401,59 @@ type Withdrawal @entity(immutable: true) {
 }
 
 type CoveWithdrawal @entity(immutable: true) {
-  id: ID!
-  timestamp: BigInt!
+  id: Bytes!
+  timestamp: Timestamp!
   cove: Cove!
   amountUsd: BigDecimal!
   withdrawer: Bytes!
 }
 
-type AllCoveStatus @entity {
+type CoveParent @entity(immutable: false) {
   "Id of smart contract"
-  id: ID!
+  id: Bytes!
+  pool: Pool!
+  createdAt: Timestamp!
   volumeUSD: BigDecimal!
   txCount: Int!
   depositCount: Int!
   withdrawalCount: Int!
 }
 
-type AllCovesHistoricStatus @entity {
-  id: ID!
-  from: BigInt!
-  to: BigInt!
-  volumeUSD: BigDecimal!
-  txCount: Int!
-  depositCount: Int!
-  withdrawalCount: Int!
-  statusType: StatusHistoricType!
+enum CoveEventType {
+  DEPOSIT
+  WITHDRAWAL
+  SWAP
 }
 
-type Cove @entity {
-  id: ID!
+type CoveEvent @entity(timeseries: true) {
+  id: Int8!
+  timestamp: Timestamp!
+  coveParent: CoveParent!
+  cove: Cove!
+  # Amount in USD for withdrawals and deposits
+  amountUSD: BigDecimal
+  # Volume in USD for swaps
+  swapVolumeUSD: BigDecimal
+  type: Int8!
+  covePrice: BigDecimal!
+}
+
+type CoveParentStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
+  id: Int8!
+  timestamp: Timestamp!
+  coveParent: CoveParent!
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  txCount: Int8! @aggregate(fn: "count")
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+}
+
+type Cove @entity(immutable: false) {
+  id: Bytes!
+  pool: Pool!
   # pointer to CoveAsset
   longtailAsset: Token!
   # duplicate of longtailAsset for easy filtering
@@ -325,7 +475,7 @@ type Cove @entity {
   # wallet address that opened the cove.
   creator: Bytes!
   # timestamp to when the cove was opened
-  createdAt: BigInt!
+  createdAt: Timestamp!
   # transaction that initialized the cove.
   transaction: Bytes!
 
@@ -333,24 +483,42 @@ type Cove @entity {
   depositCount: BigInt!
   # all time withdrawals count
   withdrawalCount: BigInt!
+  # derived cove transaction sources
+  transactionSources: [CoveTransactionSource!]! @derivedFrom(field: "cove")
 }
 
-type HistoricCoveStatus @entity {
-  id: ID!
+type CoveStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
+  id: Int8!
+  timestamp: Timestamp!
   cove: Cove!
-  from: BigInt!
-  to: BigInt!
-  volumeUSD: BigDecimal!
-  price: BigDecimal!
-  txCount: Int!
-  depositCount: Int!
-  withdrawalCount: Int!
-  statusType: StatusHistoricType!
+  
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  txCount: Int8! @aggregate(fn: "count")
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+
+  initialPrice: BigDecimal! @aggregate(fn: "first", arg: "covePrice")
+  price: BigDecimal! @aggregate(fn: "last", arg: "covePrice")
 }
 
-type UserCoveStake @entity {
+type CovesStats @aggregation(intervals: ["day", "hour"], source: "CoveEvent") {
+  id: Int8!
+  timestamp: Timestamp!
+  volumeUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 2 then swapVolumeUSD else 0 end")
+  txCount: Int8! @aggregate(fn: "count")
+  swapCount: Int8! @aggregate(fn: "sum", arg: "case when type = 2 then 1 else 0 end")
+  depositCount: Int8! @aggregate(fn: "sum", arg: "case when type = 0 then 1 else 0 end")
+  depositedUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 0 then amountUSD else 0 end")
+  withdrawalCount: Int8! @aggregate(fn: "sum", arg: "case when type = 1 then 1 else 0 end")
+  withdrewUSD: BigDecimal! @aggregate(fn: "sum", arg: "case when type = 1 then amountUSD else 0 end")
+}
+
+type UserCoveStake @entity(immutable: false) {
   # {coveId}-{wallet}
-  id: ID!
+  id: Bytes!
   cove: Cove!
   user: Bytes!
   depositTokens: BigInt!

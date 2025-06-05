@@ -1,14 +1,20 @@
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, log } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
-import { ERC20 } from '../../types/ClipperDirectExchange/ERC20'
+import { ERC20 } from '../../types/templates/ClipperCommonExchangeV0/ERC20'
 import { Token } from '../../types/schema'
 import { AddressZeroName, AddressZeroSymbol } from '../addresses'
 import { ADDRESS_ZERO, BIG_INT_ONE, BIG_INT_ZERO } from '../constants'
 
-export function fetchTokenSymbol(tokenAddress: Address): string {
+/**
+ * Fetch the symbol of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The symbol of the token
+ */
+export function eth_fetchTokenSymbol(tokenAddress: Address): string {
   let contract = ERC20.bind(tokenAddress)
 
-  if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
+  if (tokenAddress.equals(ADDRESS_ZERO)) {
     return AddressZeroSymbol
   }
   // try types string and bytes32 for symbol
@@ -22,7 +28,13 @@ export function fetchTokenSymbol(tokenAddress: Address): string {
   return symbolValue
 }
 
-export function fetchTokenDecimals(tokenAddress: Address): BigInt {
+/**
+ * Fetch the decimals of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The decimals of the token
+ */
+export function eth_fetchTokenDecimals(tokenAddress: Address): i32 {
   let contract = ERC20.bind(tokenAddress)
   // try types uint8 for decimals
   let decimalValue = 18
@@ -33,11 +45,17 @@ export function fetchTokenDecimals(tokenAddress: Address): BigInt {
     decimalValue = decimalResult.value
   }
 
-  return BigInt.fromI32(decimalValue as i32)
+  return decimalValue
 }
 
-export function fetchTokenName(tokenAddress: Address): string {
-  if (tokenAddress.equals(Address.fromString(ADDRESS_ZERO))) {
+/**
+ * Fetch the name of a token.
+ * Only used when creating a token entity. Cached in Token entities.
+ * @param tokenAddress - The address of the token
+ * @returns The name of the token
+ */
+export function eth_fetchTokenName(tokenAddress: Address): string {
+  if (tokenAddress.equals(ADDRESS_ZERO)) {
     return AddressZeroName
   }
 
@@ -54,8 +72,14 @@ export function fetchTokenName(tokenAddress: Address): string {
   return nameValue
 }
 
-export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
-  let tokenContract = ERC20.bind(Address.fromString(token.id))
+/**
+ * Fetch the balance of a token.
+ * @param token - The token entity
+ * @param wallet - The address of the wallet
+ * @returns The balance of the token
+ */
+export function eth_fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
+  let tokenContract = ERC20.bind(Address.fromBytes(token.id))
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(wallet)
 
@@ -63,15 +87,21 @@ export function fetchTokenBalance(token: Token, wallet: Address): BigDecimal {
   if (!tokenBigBalanceResult.reverted) {
     tokenBigBalance = tokenBigBalanceResult.value
   } else {
-    log.info('Error fetching balance of {}', [token.id])
+    log.info('Error fetching balance of {}', [token.id.toHex()])
   }
   let tokenBalance = convertTokenToDecimal(tokenBigBalance, token.decimals)
 
   return tokenBalance
 }
 
-export function fetchBigIntTokenBalance(assetAddress: string, owner: Address): BigInt {
-  let tokenContract = ERC20.bind(Address.fromString(assetAddress))
+/**
+ * Fetch the balance of a token.
+ * @param assetAddress - The address of the token
+ * @param owner - The address of the owner
+ * @returns The balance of the token
+ */
+export function eth_fetchBigIntTokenBalance(assetAddress: Address, owner: Address): BigInt {
+  let tokenContract = ERC20.bind(assetAddress)
 
   let tokenBigBalanceResult = tokenContract.try_balanceOf(owner)
 

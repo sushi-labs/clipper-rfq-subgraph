@@ -1,23 +1,35 @@
-import { Bytes, BigInt, Address } from '@graphprotocol/graph-ts'
-import { AllCovesHistoricStatus, AllCoveStatus, Cove, HistoricCoveStatus, UserCoveStake } from '../../types/schema'
-import { clipperCoveAddress } from '../addresses'
-import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, ONE_DAY, ONE_HOUR } from '../constants'
+import { Address, Bytes, ethereum } from '@graphprotocol/graph-ts'
+import { Cove, CoveParent, UserCoveStake } from '../../types/schema'
+import { BIG_DECIMAL_ZERO, BIG_INT_ZERO } from '../constants'
 import { loadToken } from '../utils'
-import { getOpenTime } from '../utils/timeHelpers'
+import { eth_getCovePoolAddress } from '../utils/cove'
+import { PoolHelpers } from '../utils/pool'
 
-export function loadCove(tokenAddress: Address, creator: Bytes, timestamp: BigInt, transaction: Bytes): Cove {
-  let id = tokenAddress.toHexString()
+export function loadCove(
+  poolContractAbiName: string,
+  coveParentAddressBytes: Bytes,
+  tokenAddress: Bytes,
+  creator: Bytes,
+  block: ethereum.Block,
+  transaction: Bytes,
+): Cove {
+  let coveParentAddress = Address.fromBytes(coveParentAddressBytes)
+  let id = coveParentAddress
+    .concat(tokenAddress)
   let cove = Cove.load(id)
 
   if (!cove) {
-    let coveAsset = loadToken(tokenAddress)
+    let coveAsset = loadToken(tokenAddress, block)
+    let poolAddress = eth_getCovePoolAddress(coveParentAddress)
+    let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, block)
+    let pool = poolHelpers.loadPool()
 
     cove = new Cove(id)
-
+    cove.pool = pool.id
     cove.longtailAsset = coveAsset.id
     cove.coveAssetName = coveAsset.name
     cove.coveAssetSymbol = coveAsset.symbol
-    cove.createdAt = timestamp
+    cove.createdAt = block.timestamp.toI32()
     cove.creator = creator
     cove.transaction = transaction
 
@@ -42,14 +54,14 @@ export function loadCove(tokenAddress: Address, creator: Bytes, timestamp: BigIn
   return cove as Cove
 }
 
-export function loadUserCoveStake(coveId: string, userWallet: Address): UserCoveStake {
-  let id = coveId.concat('-').concat(userWallet.toHexString())
+export function loadUserCoveStake(coveAddress: Bytes, userWallet: Bytes): UserCoveStake {
+  let id = coveAddress.concat(userWallet)
   let stake = UserCoveStake.load(id)
 
   if (!stake) {
     stake = new UserCoveStake(id)
     stake.user = userWallet
-    stake.cove = coveId
+    stake.cove = coveAddress
     stake.depositTokens = BIG_INT_ZERO
     stake.active = true
 
@@ -59,81 +71,24 @@ export function loadUserCoveStake(coveId: string, userWallet: Address): UserCove
   return stake as UserCoveStake
 }
 
-export function loadAllCoveStatus(): AllCoveStatus {
-  let allStatus = AllCoveStatus.load(clipperCoveAddress.toHexString())
+export function loadCoveParent(poolContractAbiName: string, coveParentAddressBytes: Bytes, block: ethereum.Block): CoveParent {
+  let coveParentAddress = Address.fromBytes(coveParentAddressBytes)
+  let parent = CoveParent.load(coveParentAddress)
 
-  if (!allStatus) {
-    allStatus = new AllCoveStatus(clipperCoveAddress.toHexString())
+  if (!parent) {
+    parent = new CoveParent(coveParentAddress)
+    let poolAddress = eth_getCovePoolAddress(coveParentAddress)
+    let poolHelpers = new PoolHelpers(poolAddress, poolContractAbiName, block)
+    let pool = poolHelpers.loadPool()
+    parent.pool = pool.id
+    parent.createdAt = block.timestamp.toI32()
+    parent.txCount = 0
+    parent.depositCount = 0
+    parent.withdrawalCount = 0
+    parent.volumeUSD = BIG_DECIMAL_ZERO
 
-    allStatus.txCount = 0
-    allStatus.depositCount = 0
-    allStatus.withdrawalCount = 0
-    allStatus.volumeUSD = BIG_DECIMAL_ZERO
-
-    allStatus.save()
+    parent.save()
   }
 
-  return allStatus as AllCoveStatus
-}
-
-export function loadHistoricAllCoveStatus(timestamp: BigInt, statusType: string): AllCovesHistoricStatus {
-  let timeRange = statusType === 'HOURLY' ? ONE_HOUR : ONE_DAY
-  let openTime = getOpenTime(timestamp, timeRange)
-  let from = openTime
-  let to = openTime.plus(timeRange).minus(BIG_INT_ONE)
-  let id = clipperCoveAddress
-    .toHexString()
-    .concat('-')
-    .concat(from.toString())
-    .concat(to.toString())
-
-  let allStatusHistoric = AllCovesHistoricStatus.load(id)
-
-  if (!allStatusHistoric) {
-    allStatusHistoric = new AllCovesHistoricStatus(id)
-
-    allStatusHistoric.from = from
-    allStatusHistoric.to = to
-    allStatusHistoric.volumeUSD = BIG_DECIMAL_ZERO
-    allStatusHistoric.depositCount = 0
-    allStatusHistoric.withdrawalCount = 0
-    allStatusHistoric.txCount = 0
-    allStatusHistoric.statusType = statusType
-
-    allStatusHistoric.save()
-  }
-
-  return allStatusHistoric as AllCovesHistoricStatus
-}
-
-export function loadHistoricCoveStatus(cove: Cove, timestamp: BigInt, statusType: string): HistoricCoveStatus {
-  let timeRange = statusType === 'HOURLY' ? ONE_HOUR : ONE_DAY
-  let openTime = getOpenTime(timestamp, timeRange)
-  let from = openTime
-  let to = openTime.plus(timeRange).minus(BIG_INT_ONE)
-
-  let id = cove.id
-    .concat('-')
-    .concat(from.toString())
-    .concat(to.toString())
-
-  let historicCoveStatus = HistoricCoveStatus.load(id)
-
-  if (!historicCoveStatus) {
-    historicCoveStatus = new HistoricCoveStatus(id)
-
-    historicCoveStatus.from = from
-    historicCoveStatus.to = to
-    historicCoveStatus.volumeUSD = BIG_DECIMAL_ZERO
-    historicCoveStatus.price = BIG_DECIMAL_ZERO
-    historicCoveStatus.txCount = 0
-    historicCoveStatus.statusType = statusType
-    historicCoveStatus.cove = cove.id
-    historicCoveStatus.depositCount = 0
-    historicCoveStatus.withdrawalCount = 0
-
-    historicCoveStatus.save()
-  }
-
-  return historicCoveStatus as HistoricCoveStatus
+  return parent
 }
