@@ -115,31 +115,6 @@ LpTransfers.set(
 );
 {{/each}}
 
-// Price Oracle Proxy information
-export class PriceOracleProxyInfo {
-  address: Address
-  startBlock: i32
-  tokenAddress: Address
-
-  constructor(address: Address, startBlock: i32, tokenAddress: Address) {
-    this.address = address
-    this.startBlock = startBlock
-    this.tokenAddress = tokenAddress
-  }
-}
-
-export let PriceOracleProxies = new TypedMap<Address, PriceOracleProxyInfo>();
-{{#each priceOracles}}
-PriceOracleProxies.set(
-  Address.fromString('{{address}}'), 
-  new PriceOracleProxyInfo(
-    Address.fromString('{{address}}'), 
-    {{indexingStartBlock}},
-    Address.fromString('{{token}}')
-  )
-);
-{{/each}}
-
 export let FallbackAssetPrice = new TypedMap<Address, string>();
 {{#each fallbackPrices}}
 FallbackAssetPrice.set(Address.fromString('{{@key}}'), '{{this}}');

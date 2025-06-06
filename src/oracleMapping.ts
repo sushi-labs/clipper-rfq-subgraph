@@ -1,7 +1,7 @@
 import { Address, BigInt, dataSource, DataSourceContext, ethereum, log } from '@graphprotocol/graph-ts'
 import { AnswerUpdated } from '../types/templates/PriceOracle/AggregatorV3Interface'
 import { convertTokenToDecimal, loadToken } from './utils'
-import { Pool, PoolEvent } from '../types/schema'
+import { Pool, PoolEvent, PriceAggregatorProxy } from '../types/schema'
 import { ORACLE_PRICE_SOURCE, ORACLE_UPDATE_EVENT } from './constants'
 import { PoolHelpers } from './utils/pool'
 import { PriceOracle as PriceOracleTemplate } from '../types/templates'
@@ -14,15 +14,6 @@ export function handleProxyStart(block: ethereum.Block): void {
   let tokenAddressString = context.getString('tokenAddress')
   let proxyAddress = Address.fromString(proxyAddressString)
   let tokenAddress = Address.fromString(tokenAddressString)
-  
-  createPriceOracleProxyEntity(proxyAddress, tokenAddress, block)
-}
-
-export function createPriceOracleProxyEntity(
-  proxyAddress: Address,
-  tokenAddress: Address,
-  block: ethereum.Block
-): void {
   let priceAggregatorProxy = loadPriceAggregatorProxy(proxyAddress, block)
 
   let token = loadToken(tokenAddress, block)
