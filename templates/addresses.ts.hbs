@@ -16,122 +16,33 @@ FarmingHelpersByPool.set(Address.fromString('{{address}}'), Address.fromString('
 
 export let ClipperFeeSplitAddressesByPool = new TypedMap<Address, Array<Address>>();
 {{#each pools}}
-{
-  let feeSplits = new Array<Address>();
-  {{#ifAddress feeSplit}}
-  feeSplits.push(Address.fromString('{{feeSplit}}'));
-  {{/ifAddress}}
-  {{#ifAddress farmFeeSplit}}
-  feeSplits.push(Address.fromString('{{farmFeeSplit}}'));
-  {{/ifAddress}}
-  ClipperFeeSplitAddressesByPool.set(Address.fromString('{{address}}'), feeSplits);
-}
+let feeSplitsForPool{{@index}} = new Array<Address>();
+{{#ifAddress feeSplit}}
+feeSplitsForPool{{@index}}.push(Address.fromString('{{feeSplit}}'));
+{{/ifAddress}}
+{{#ifAddress farmFeeSplit}}
+feeSplitsForPool{{@index}}.push(Address.fromString('{{farmFeeSplit}}'));
+{{/ifAddress}}
+ClipperFeeSplitAddressesByPool.set(Address.fromString('{{address}}'), feeSplitsForPool{{@index}});
 {{/each}}
 
-// Vault information for each pool
-export class VaultInfo {
-  address: Address
-  type: string
-  startBlock: i32
-  farmingHelper: Address | null
-  abi: string | null
-  transferHelper: Address | null
 
-  constructor(
-    address: Address,
-    type: string,
-    startBlock: i32,
-    farmingHelper: Address | null = null,
-    abi: string | null = null,
-    transferHelper: Address | null = null
-  ) {
-    this.address = address
-    this.type = type
-    this.startBlock = startBlock
-    this.farmingHelper = farmingHelper
-    this.abi = abi
-    this.transferHelper = transferHelper
-  }
-}
-
-export let VaultsByPool = new TypedMap<Address, Array<VaultInfo>>();
-{{#each pools}}
-{{#if vaults}}
-{
-  let vaults = new Array<VaultInfo>();
-  {{#each vaults}}
-    {{#eq type "FARM"}}
-    vaults.push(new VaultInfo(
-      Address.fromString('{{address}}'),
-      '{{type}}',
-      {{startBlock}},
-      Address.fromString('{{farmingHelper}}'),
-      '{{abi}}',
-      null
-    ));
-    {{/eq}}
-    {{#eq type "PROTOCOL_DEPOSIT"}}
-    vaults.push(new VaultInfo(
-      Address.fromString('{{address}}'),
-      '{{type}}',
-      {{startBlock}},
-      null,
-      null,
-      Address.fromString('{{transferHelper}}')
-    ));
-    {{/eq}}
-    {{#eq type "FEE_SPLIT"}}
-    vaults.push(new VaultInfo(
-      Address.fromString('{{address}}'),
-      '{{type}}',
-      {{startBlock}},
-      null,
-      null,
-      null
-    ));
-    {{/eq}}
-  {{/each}}
-  VaultsByPool.set(Address.fromString('{{address}}'), vaults);
-}
-{{/if}}
-{{/each}}
-
-// LP Transfer information
-export class LpTransferInfo {
-  address: Address
-  startBlock: i32
-
-  constructor(address: Address, startBlock: i32) {
-    this.address = address
-    this.startBlock = startBlock
-  }
-}
-
-export let LpTransfers = new TypedMap<Address, LpTransferInfo>();
-{{#each lpTransfers}}
-LpTransfers.set(
-  Address.fromString('{{address}}'), 
-  new LpTransferInfo(Address.fromString('{{address}}'), {{startBlock}})
-);
-{{/each}}
-
-export let FallbackAssetPrice = new TypedMap<Address, string>();
+export let FallbackAssetPrice = new TypedMap<Address, string>()
 {{#each fallbackPrices}}
-FallbackAssetPrice.set(Address.fromString('{{@key}}'), '{{this}}');
+FallbackAssetPrice.set(Address.fromString('{{@key}}'), '{{this}}')
 {{/each}}
 
-export let DailyFallbackPrices = new TypedMap<Address, TypedMap<string, string>>();
+// Add daily fallback prices
+export let DailyFallbackPrices = new TypedMap<Address, TypedMap<string, string>>()
 {{#each dailyFallbackPrices}}
-{
-  let prices = new TypedMap<string, string>();
-  {{#each this}}
-  prices.set('{{timestamp}}', '{{price}}');
-  {{/each}}
-  DailyFallbackPrices.set(Address.fromString('{{@key}}'), prices);
-}
+let prices_{{@key}} = new TypedMap<string, string>()
+{{#each this}}
+prices_{{tokenAddress}}.set('{{timestamp}}', '{{price}}')
+{{/each}}
+DailyFallbackPrices.set(Address.fromString('{{@key}}'), prices_{{@key}})
 {{/each}}
 
-export let AddressZeroSymbol = '{{addressZeroMap.symbol}}';
-export let AddressZeroAddress = '{{addressZeroMap.address}}';
-export let AddressZeroDecimals = '{{addressZeroMap.decimals}}';
-export let AddressZeroName = '{{addressZeroMap.name}}';
+export let AddressZeroSymbol = '{{addressZeroMap.symbol}}'
+export let AddressZeroAddress = '{{addressZeroMap.address}}'
+export let AddressZeroDecimals = '{{addressZeroMap.decimals}}'
+export let AddressZeroName = '{{addressZeroMap.name}}'
