@@ -91,7 +91,6 @@ export class PoolHelpers {
 
     return poolTokens
   }
-
   /**
    * Get the balance of all tokens in the pool.
    * @returns The balance of all tokens in the pool
@@ -114,7 +113,7 @@ export class PoolHelpers {
     for (let i = 0; i < poolTokens.length; i++) {
       let tokenAddress = Address.fromBytes(poolTokens[i].token)
       poolTokenAddresses.push(tokenAddress)
-      poolTokenBalances.push(poolContract.balanceOf(tokenAddress))
+      poolTokenBalances.push(eth_fetchBigIntTokenBalance(tokenAddress, this.poolAddress))
     }
     let allTokensBalance = new ClipperDirectExchangeV1__allTokensBalanceResult(
       poolTokenBalances,
