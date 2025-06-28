@@ -9,24 +9,14 @@ export function handleProtocolDepositStart(block: ethereum.Block): void {
   const transferHelperString = context.getString('transferHelper')
   const transferHelper = Address.fromString(transferHelperString)
   const contractAddress = dataSource.address()
-
-  const name = nameValue != null ? nameValue.toString() : null
-  createProtocolDepositVaultEntity(contractAddress, transferHelper, name, block)
-}
-
-export function createProtocolDepositVaultEntity(
-  contractAddress: Address,
-  transferHelper: Address,
-  name: string | null,
-  block: ethereum.Block
-): void {
   const protocolDepositContract = ClipperProtocolDeposit.bind(contractAddress)
+
 
   const vault = new PoolVault(contractAddress)
   vault.pool = protocolDepositContract.CLIPPER_EXCHANGE()
   vault.type = PROTOCOL_DEPOSIT_VAULT_TYPE
   vault.createdAt = block.timestamp.toI32()
-  vault.name = name
+  vault.name = nameValue != null ? nameValue.toString() : null
   vault.protocolDeposit = contractAddress
   vault.save()
 
