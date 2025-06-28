@@ -39,6 +39,9 @@ type Pool @entity(immutable: false) {
   # Current total pool tokens held by fee split addresses
   feeSplitPoolTokens: BigInt!
 
+  # permit router address for this pool
+  permitRouter: Bytes
+
   # derived pool transaction sources
   transactionSources: [PoolTransactionSource!]! @derivedFrom(field: "pool")
 

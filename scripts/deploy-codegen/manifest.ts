@@ -100,8 +100,8 @@ export function transformDeploymentToManifestBase(
   }
 
   let firstPool = deployment.pools[0]
-  if (!firstPool) {
-    throw new Error('No pools to deploy')
+  if (!firstPool && (!deployment.registers || deployment.registers.length === 0)) {
+    throw new Error('No pools or BladePoolRegisters to deploy')
   }
 
   const priceOracles: SubgraphsManifestDeploymentBase['priceOracles'] = []
@@ -141,6 +141,7 @@ export function transformDeploymentToManifestBase(
     ...deployment,
     poolsBySourceAbi,
     priceOracles,
+    registers: deployment.registers,
   }
 }
 
@@ -512,6 +513,124 @@ const LpTransferTemplate: Omit<DataSourceTemplate, 'network'> = {
   },
 }
 
+const BladePoolRegisterTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'BladePoolRegister',
+  source: {
+    abi: 'BladePoolRegisterV0',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['Pool', 'PoolLpTransfer'],
+    abis: [
+      {
+        name: 'BladePoolRegisterV0',
+        file: './abis/BladePoolRegisterV0.json',
+      },
+    ],
+    eventHandlers: [
+      {
+        event: 'BladeLPTransferCreated(indexed address,indexed address,indexed address)',
+        handler: 'handleBladeLPTransferCreated',
+      },
+      {
+        event: 'BladePermitRouterCreated(indexed address,indexed address)',
+        handler: 'handleBladePermitRouterCreated',
+      },
+      {
+        event: 'BladeVerifiedExchangeCreated(indexed address,address[],address[])',
+        handler: 'handleBladeVerifiedExchangeCreated',
+      },
+    ],
+    file: './src/mappingBladePoolRegister.ts',
+  },
+}
+
+const BladeCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: 'BladeCommonExchangeV0',
+  source: { abi: 'BladeCommonExchangeV0' },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: [
+      'Token',
+      'Pool',
+      'PoolToken',
+      'PoolEvent',
+      'User',
+      'TransactionSource',
+      'PoolPair',
+      'PoolTransactionSource',
+      'Deposit',
+      'Withdrawal',
+      'Swap',
+      'Pair',
+      'PriceAggregatorProxy',
+    ],
+    abis: [
+      {
+        name: 'BladeCommonExchangeV0',
+        file: './abis/BladeCommonExchangeV0.json',
+      },
+      {
+        name: 'ERC20',
+        file: './abis/ERC20.json',
+      },
+      {
+        name: 'AggregatorV3Interface',
+        file: './abis/AggregatorV3Interface.json',
+      },
+    ],
+    blockHandlers: [
+      {
+        handler: 'handlePoolStart',
+        filter: {
+          kind: 'once'
+        }
+      }
+    ],
+    eventHandlers: [
+      {
+        event: 'Deposited(indexed address,uint256,uint256)',
+        handler: 'handleDeposited',
+        calls: {
+          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+        },
+      },
+      {
+        event: 'Withdrawn(indexed address,uint256,uint256)',
+        handler: 'handleWithdrawn',
+        calls: {
+          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+        },
+      },
+      {
+        event: 'AssetWithdrawn(indexed address,uint256,indexed address,uint256)',
+        handler: 'handleSingleAssetWithdrawn',
+        calls: {
+          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+        },
+      },
+      {
+        event: 'Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)',
+        handler: 'handleSwapped',
+        calls: {
+          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+        },
+      },
+      {
+        event: 'Transfer(indexed address,indexed address,uint256)',
+        handler: 'handleTransfer',
+      },
+    ],
+    file: './src/mapping.ts',
+  },
+}
+
 // Generates the SubgraphManifest object
 export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase): SubgraphManifest {
   const templates: DataSourceTemplate[] = [
@@ -522,13 +641,15 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
     { network: config.networkName, ...VaultProtocolDepositTemplate },
     { network: config.networkName, ...VaultFeeSplitTemplate },
     { network: config.networkName, ...LpTransferTemplate },
+    { network: config.networkName, ...BladePoolRegisterTemplate },
+    { network: config.networkName, ...BladeCommonExchangeV0Template },
   ]
   const dataSources: DataSource[] = []
 
   // Add pool data sources
   for (const sourceAbi of PoolSourceAbiSet.values()) {
     if (sourceAbi === 'ClipperCommonExchangeV0') {
-      for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0) {
+      for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0 || []) {
         // Get handlers other than Transfer
         const baseEventHandlers = (ClipperCommonExchangeV0Template.mapping.eventHandlers || []).flatMap(
           ({ calls, ...handler }) => {
@@ -684,6 +805,19 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
     })
   }
 
+  for (const bladePoolRegister of config.registers || []) {
+    dataSources.push({
+      ...BladePoolRegisterTemplate,
+      name: `BladePoolRegister_${bladePoolRegister.address}`,
+      network: config.networkName,
+      source: {
+        abi: BladePoolRegisterTemplate.source.abi,
+        address: bladePoolRegister.address,
+        startBlock: bladePoolRegister.startBlock,
+      },
+      mapping: BladePoolRegisterTemplate.mapping,
+    })
+  }
 
   // --- Assemble Manifest ---
   const manifest: SubgraphManifest = {

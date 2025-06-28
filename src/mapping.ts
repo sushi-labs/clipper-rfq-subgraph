@@ -1,4 +1,4 @@
-import { BigDecimal, BigInt, Bytes, dataSource, ethereum, log } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, dataSource, ethereum, log } from '@graphprotocol/graph-ts'
 import {
   AssetWithdrawn,
   Deposited,
@@ -18,7 +18,7 @@ import {
   loadTransactionSource,
 } from './utils'
 import { getTokenUsdPrice } from './utils/prices'
-import { ClipperFeeSplitAddressesByPool, FarmingHelpersByPool, PermitRoutersByPool } from './addresses'
+import { ClipperFeeSplitAddressesByPool, FarmingHelpersByPool } from './addresses'
 import { PoolHelpers } from './utils/pool'
 import { eth_fetchBigIntTokenBalance } from './utils/token'
 
@@ -51,6 +51,9 @@ export function handleDeposited(event: Deposited): void {
   }
 
   pool.poolTokensSupply = poolTokenSupply
+  if (poolContractAbiName === 'BladeVerifiedExchange') {
+    pool.feeSplitPoolTokens = poolTokenSupply
+  }
   pool.depositCount = pool.depositCount.plus(BIG_INT_ONE)
   pool.depositedUSD = pool.depositedUSD.plus(usdProportion)
   pool.poolValueUSD = currentPoolLiquidity
@@ -98,6 +101,9 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   poolEvent.poolTokensSupply = poolTokenSupply
 
   pool.poolTokensSupply = poolTokenSupply
+  if (poolContractAbiName === 'BladeVerifiedExchange') {
+    pool.feeSplitPoolTokens = poolTokenSupply
+  }
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
   pool.withdrewUSD = pool.withdrewUSD.plus(usdProportion)
   pool.poolValueUSD = currentPoolLiquidity
@@ -222,10 +228,10 @@ export function handleSwapped(event: Swapped): void {
   if (pool.poolTokensSupply.gt(BIG_INT_ZERO)) {
     theFraction = pool.feeSplitPoolTokens.toBigDecimal().div(pool.poolTokensSupply.toBigDecimal())
   }
-  let daoRevenueFraction = event.block.timestamp.ge(BigInt.fromI32(1690848000))
+  let revenueFraction = event.block.timestamp.ge(BigInt.fromI32(1690848000))
     ? BigDecimal.fromString('1')
     : BigDecimal.fromString('0.5')
-  let revenueUSD = feeUSD.times(theFraction).times(daoRevenueFraction)
+  let revenueUSD = feeUSD.times(theFraction).times(revenueFraction)
 
   pool.txCount = pool.txCount.plus(BIG_INT_ONE)
   pool.volumeUSD = pool.volumeUSD.plus(transactionVolume)
@@ -260,9 +266,14 @@ export function handleSwapped(event: Swapped): void {
 
 export function handleTransfer(event: Transfer): void {
   let poolAddress = event.address
-  let permitRouter = PermitRoutersByPool.get(poolAddress)
+  let context = dataSource.context()
+  let poolContractAbiName = context.getString('contractAbiName')
+  let poolHelpers = new PoolHelpers(event.address, poolContractAbiName, event.block)
+  let pool = poolHelpers.loadPool()
+  let permitRouter = pool.permitRouter
+  let permitRouterAddress = permitRouter ? Address.fromBytes(permitRouter) : null
 
-  if (permitRouter && event.params.from.equals(permitRouter)) {
+  if (permitRouterAddress && permitRouterAddress.equals(event.params.from)) {
     let deposit = Deposit.load(event.transaction.hash)
     if (!deposit) {
       return
@@ -271,6 +282,11 @@ export function handleTransfer(event: Transfer): void {
     deposit.depositor = event.params.to
     deposit.save()
     // Don't process fee split logic for permit router transfers
+    return
+  }
+
+  if (poolContractAbiName === 'BladeVerifiedExchange') {
+    // Blade contracts don't use fee split contracts
     return
   }
 

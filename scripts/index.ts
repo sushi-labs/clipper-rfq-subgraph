@@ -13,6 +13,7 @@ import { getArbitrumDeploymentConfig } from './deploy-codegen/networks/arbitrum'
 import { getBaseDeploymentConfig } from './deploy-codegen/networks/base'
 import { getMantleDeploymentConfig } from './deploy-codegen/networks/mantle'
 import { getPolygonZkevmDeploymentConfig } from './deploy-codegen/networks/polygon-zkevm'
+import { getKatanaDeploymentConfig } from './deploy-codegen/networks/katana'
 import { validateUniqueAddresses, validatePoolTokenPrices } from './deploy-codegen/validation'
 import { loadOrFetchDailyPrices, mapPricesToAddresses, AddressKeyedDailyPrices } from './deploy-codegen/prices'
 import {
@@ -50,6 +51,9 @@ const getDeploymentForSource = (source: string): Deployment => {
       break
     case 'polygon-zkevm':
       deploymentPartial = getPolygonZkevmDeploymentConfig()
+      break
+    case 'katana':
+      deploymentPartial = getKatanaDeploymentConfig()
       break
     default:
       throw new Error(`Unsupported deployment source: ${source}`)

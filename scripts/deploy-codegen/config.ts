@@ -1,9 +1,9 @@
 import { Chain } from 'viem'
 import * as chains from 'viem/chains'
 
-export type PoolSourceAbi = 'ClipperCommonExchangeV0'
+export type PoolSourceAbi = 'ClipperCommonExchangeV0' | 'BladeCommonExchangeV0'
 
-export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set(['ClipperCommonExchangeV0'])
+export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set(['ClipperCommonExchangeV0', 'BladeCommonExchangeV0'])
 
 type VaultCommon = {
   startBlock: number
@@ -62,12 +62,18 @@ export interface LpTransferSourceConfig {
   startBlock: number
 }
 
+export interface BladePoolRegisterConfig {
+  address: string
+  startBlock: number
+}
+
 export interface Deployment {
   networkName: string
   prune: number | 'never' | 'auto'
 
   pools: PoolConfig[]
   coves: CoveConfig[]
+  registers?: BladePoolRegisterConfig[]
 
   priceOracles: PriceOracleConfig[]
   lpTransfers?: LpTransferSourceConfig[]
@@ -94,11 +100,27 @@ export const networkChainMap: Record<string, { chain: Chain; rpcUrl?: string }> 
   base: { chain: chains.base },
   mantle: { chain: chains.mantle },
   'polygon-zkevm': { chain: chains.polygonZkEvm },
+  katana: { 
+    chain: {
+      id: 747474,
+      name: 'Katana',
+      network: 'katana',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: {
+        default: { http: ['http://localhost:5050'] },
+        public: { http: ['http://localhost:5050'] },
+      },
+      blockExplorers: {
+        default: { name: 'Katana Explorer', url: 'http://localhost:5050' },
+      },
+    } as Chain,
+  },
 }
 
 export type SubgraphsManifestDeploymentBase = Omit<Deployment, 'pools' | 'priceOracles' | 'lpTransferSources'> & {
   poolsBySourceAbi: Record<PoolSourceAbi, PoolConfig[]>
   priceOracles: (Omit<PriceOracleConfig, 'tokens'> & { token: string; indexingStartBlock: number })[]
+  registers?: BladePoolRegisterConfig[]
   // Add daily fallback prices
   dailyFallbackPrices?: {
     [tokenAddress: string]: {
