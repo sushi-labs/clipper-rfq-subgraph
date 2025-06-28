@@ -317,6 +317,14 @@ const ClipperCoveTemplate: Omit<DataSourceTemplate, 'network'> = {
         file: './abis/ClipperDirectExchangeV0.json',
       },
     ],
+    blockHandlers: [
+      {
+        handler: 'handleCoveStart',
+        filter: {
+          kind: 'once'
+        }
+      }
+    ],
     eventHandlers: [
       {
         event: 'CoveSwapped(indexed address,indexed address,indexed address,uint256,uint256,bytes32)',

@@ -12,6 +12,13 @@ import { convertTokenToDecimal, loadCoveTransactionSource, loadToken, loadTransa
 import { getTokenUsdPrice } from './utils/prices'
 import { eth_getCoveAssetPrice } from './utils/cove'
 import { PoolHelpers } from './utils/pool'
+import { ethereum } from '@graphprotocol/graph-ts'
+
+export function handleCoveStart(block: ethereum.Block): void {
+  let context = dataSource.context()
+  let poolContractAbiName = context.getString('poolContractAbiName')
+  loadCoveParent(poolContractAbiName, dataSource.address(), block)
+}
 
 export function handleCoveDeposited(event: CoveDeposited): void {
   let context = dataSource.context()
