@@ -39,6 +39,14 @@ type Pool @entity(immutable: false) {
   # Current total pool tokens held by fee split addresses
   feeSplitPoolTokens: BigInt!
 
+  # Total fees transferred from `FeesTaken` events
+  totalFeesTaken: BigInt!
+  # Amount of transactions corresponding to `FeesTaken` event
+  feesTakenTransactionCount: BigInt!
+
+  # Total revenue taken from the pool
+  totalRevenueUSDTaken: BigDecimal!
+
   # permit router address for this pool
   permitRouter: Bytes
 
@@ -60,6 +68,8 @@ type Pool @entity(immutable: false) {
 
   # derived pool vaults
   vaults: [PoolVault!]! @derivedFrom(field: "pool")
+
+  revenues: [PoolRevenue!]! @derivedFrom(field: "pool")
 }
 
 type PoolLpTransfer @entity(immutable: true) {
@@ -526,4 +536,21 @@ type UserCoveStake @entity(immutable: false) {
   user: Bytes!
   depositTokens: BigInt!
   active: Boolean!
+}
+
+type PoolRevenue @entity(immutable: true) {
+  id: Bytes!
+  hash: Bytes!
+  # pool tokens taken as revenue
+  poolTokens: BigInt!
+  # pool token value in usd at the time of tx
+  valueInUsd: BigDecimal!
+  # entitled revenue amount
+  entitledValueInUsd: BigDecimal!
+  # average pool balance
+  avgPoolBalanceInDollars: BigDecimal!
+  # unix timestamp of when the tx occurred
+  timestamp: Timestamp!
+  # pool that the revenue was taken from
+  pool: Pool!
 }

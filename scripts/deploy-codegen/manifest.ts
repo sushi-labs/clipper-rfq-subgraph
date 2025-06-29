@@ -570,6 +570,7 @@ const BladeCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
       'Swap',
       'Pair',
       'PriceAggregatorProxy',
+      'PoolRevenue',
     ],
     abis: [
       {
@@ -625,6 +626,10 @@ const BladeCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
       {
         event: 'Transfer(indexed address,indexed address,uint256)',
         handler: 'handleTransfer',
+      },
+      {
+        event: 'FeesTaken(uint256,uint256,uint256)',
+        handler: 'handleFeesTaken',
       },
     ],
     file: './src/mapping.ts',

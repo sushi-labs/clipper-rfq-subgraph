@@ -48,6 +48,11 @@ export class PoolHelpers {
       pool.poolTokensSupply = this.eth_getPoolTokenSupply()
       pool.uniqueUsers = BIG_INT_ZERO
 
+      // fee taking fields
+      pool.totalFeesTaken = BIG_INT_ZERO
+      pool.feesTakenTransactionCount = BIG_INT_ZERO
+      pool.totalRevenueUSDTaken = BIG_DECIMAL_ZERO
+
       if (this.sourceAbi === 'BladeVerifiedExchange') {
         pool.feeSplitPoolTokens = BIG_INT_ZERO
       } else {

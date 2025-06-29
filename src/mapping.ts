@@ -6,7 +6,8 @@ import {
   Transfer,
   Withdrawn,
 } from '../types/templates/ClipperCommonExchangeV0/ClipperDirectExchangeV1'
-import { Deposit, PoolEvent, Swap, Withdrawal } from '../types/schema'
+import { FeesTaken } from '../types/templates/BladeCommonExchangeV0/BladeCommonExchangeV0'
+import { Deposit, PoolEvent, PoolRevenue, Swap, Withdrawal } from '../types/schema'
 import { BIG_DECIMAL_ZERO, BIG_INT_ONE, BIG_INT_ZERO, DEPOSIT_EVENT, SWAP_EVENT, WITHDRAWAL_EVENT } from './constants'
 import { updatePair, updatePoolPair } from './entities/Pair'
 import { upsertUser } from './entities/User'
@@ -313,6 +314,40 @@ export function handleTransfer(event: Transfer): void {
       pool.save()
     }
   }
+}
+
+export function handleFeesTaken(event: FeesTaken): void {
+  let context = dataSource.context()
+  let poolContractAbiName = context.getString('contractAbiName')
+  let poolHelpers = new PoolHelpers(event.address, poolContractAbiName, event.block)
+  let pool = poolHelpers.loadPool()
+  
+  let entitledFeesInDollars = event.params.entitledFeesInDollars
+  let averagePoolBalanceInDollars = event.params.averagePoolBalanceInDollars
+  let tokensTransferred = event.params.tokensTransferred
+  
+  let poolRevenue = new PoolRevenue(event.transaction.hash.concatI32(event.logIndex.toI32()))
+  poolRevenue.hash = event.transaction.hash
+  poolRevenue.poolTokens = tokensTransferred
+  poolRevenue.entitledValueInUsd = entitledFeesInDollars.toBigDecimal()
+  poolRevenue.avgPoolBalanceInDollars = averagePoolBalanceInDollars.toBigDecimal()
+  poolRevenue.timestamp = event.block.timestamp.toI32()
+  poolRevenue.pool = event.address
+  
+  let poolTokenSupply = pool.poolTokensSupply
+  if (poolTokenSupply.gt(BIG_INT_ZERO) && pool.poolValueUSD.gt(BIG_DECIMAL_ZERO)) {
+    let poolTokenRatio = tokensTransferred.toBigDecimal().div(poolTokenSupply.toBigDecimal())
+    poolRevenue.valueInUsd = pool.poolValueUSD.times(poolTokenRatio)
+  } else {
+    poolRevenue.valueInUsd = BIG_DECIMAL_ZERO
+  }
+
+  pool.totalRevenueUSDTaken = pool.totalRevenueUSDTaken.plus(poolRevenue.valueInUsd)
+  pool.totalFeesTaken = pool.totalFeesTaken.plus(tokensTransferred)
+  pool.feesTakenTransactionCount = pool.feesTakenTransactionCount.plus(BIG_INT_ONE)
+  
+  poolRevenue.save()
+  pool.save()
 }
 
 export function handlePoolStart(block: ethereum.Block): void {
