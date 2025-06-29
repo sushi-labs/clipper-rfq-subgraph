@@ -5,7 +5,7 @@ import {
   BladeVerifiedExchangeCreated,
 } from '../types/templates/BladePoolRegister/BladePoolRegisterV0'
 import { Pool, PoolLpTransfer } from '../types/schema'
-import { BladeCommonExchangeV0, PriceOracle } from '../types/templates'
+import { BladeCommonExchangeV0, PriceOracleProxy } from '../types/templates'
 
 export function handleBladeLPTransferCreated(event: BladeLPTransferCreated): void {
   let lpTransfer = new PoolLpTransfer(event.params.lpTransferAddress)
@@ -36,6 +36,6 @@ export function handleBladeVerifiedExchangeCreated(event: BladeVerifiedExchangeC
     let context = new DataSourceContext()
     context.setString('proxyAddress', oracleAddress.toHexString())
     context.setString('tokenAddress', tokenAddress.toHexString())
-    PriceOracle.createWithContext(oracleAddress, context)
+    PriceOracleProxy.createWithContext(oracleAddress, context)
   }
 } 

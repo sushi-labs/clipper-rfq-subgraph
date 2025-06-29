@@ -388,6 +388,47 @@ const PriceOracleTemplate: Omit<DataSourceTemplate, 'network'> = {
   },
 }
 
+const PriceOracleProxyTemplate: Omit<DataSourceTemplate, 'network'> = {
+  kind: 'ethereum/contract',
+  name: `PriceOracleProxy`,
+  source: {
+    abi: 'AggregatorV3Interface',
+  },
+  mapping: {
+    kind: 'ethereum/events',
+    apiVersion: '0.0.9',
+    language: 'wasm/assemblyscript',
+    entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent', 'PriceAggregatorProxy'],
+    abis: [
+      {
+        name: 'AggregatorV3Interface',
+        file: './abis/AggregatorV3Interface.json',
+      },
+      {
+        name: 'ERC20',
+        file: './abis/ERC20.json',
+      },
+      {
+        name: 'ClipperDirectExchangeV1',
+        file: './abis/ClipperDirectExchangeV1.json',
+      },
+      {
+        name: 'ClipperDirectExchangeV0',
+        file: './abis/ClipperDirectExchangeV0.json',
+      },
+    ],
+    blockHandlers: [
+      {
+        handler: 'handleProxyStart',
+        filter: {
+          kind: 'once',
+        },
+      },
+    ],
+    file: './src/oracleMapping.ts',
+  },
+}
+
 const VaultFarmTemplate: Omit<DataSourceTemplate, 'network'> = {
   kind: 'ethereum/contract',
   name: 'VaultFarm',
@@ -573,6 +614,11 @@ const BladeCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
       'PoolRevenue',
     ],
     abis: [
+      ...CLIPPER_POOL_ABIS,
+      {
+        name: 'ClipperCommonExchangeV0',
+        file: './abis/ClipperCommonExchangeV0.json',
+      },
       {
         name: 'BladeCommonExchangeV0',
         file: './abis/BladeCommonExchangeV0.json',
@@ -599,28 +645,28 @@ const BladeCommonExchangeV0Template: Omit<DataSourceTemplate, 'network'> = {
         event: 'Deposited(indexed address,uint256,uint256)',
         handler: 'handleDeposited',
         calls: {
-          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+          'BladeCommonExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'Withdrawn(indexed address,uint256,uint256)',
         handler: 'handleWithdrawn',
         calls: {
-          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+          'BladeCommonExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'AssetWithdrawn(indexed address,uint256,indexed address,uint256)',
         handler: 'handleSingleAssetWithdrawn',
         calls: {
-          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+          'BladeCommonExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
         event: 'Swapped(indexed address,indexed address,indexed address,uint256,uint256,bytes)',
         handler: 'handleSwapped',
         calls: {
-          'BladeCommonExchange.allTokensBalance': 'BladeCommonExchangeV0[event.address].allTokensBalance()',
+          'BladeCommonExchange.allTokensBalance': 'ClipperDirectExchangeV1[event.address].allTokensBalance()',
         },
       },
       {
@@ -642,6 +688,7 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
     { network: config.networkName, ...ClipperCommonExchangeV0Template },
     { network: config.networkName, ...ClipperCoveTemplate },
     { network: config.networkName, ...PriceOracleTemplate },
+    { network: config.networkName, ...PriceOracleProxyTemplate },
     { network: config.networkName, ...VaultFarmTemplate },
     { network: config.networkName, ...VaultProtocolDepositTemplate },
     { network: config.networkName, ...VaultFeeSplitTemplate },
@@ -765,33 +812,17 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
 
   for (const oracle of config.priceOracles) {
     dataSources.push({
-      kind: 'ethereum/contract',
+      ...PriceOracleProxyTemplate,
       name: `PriceOracleProxy_${oracle.token}`,
       network: config.networkName,
       source: {
-        abi: 'AggregatorV3Interface',
+        abi: PriceOracleProxyTemplate.source.abi,
         address: oracle.address,
         startBlock: oracle.indexingStartBlock,
       },
       context: {
         proxyAddress: { type: 'String', data: oracle.address },
         tokenAddress: { type: 'String', data: oracle.token },
-      },
-      mapping: {
-        kind: 'ethereum/events',
-        apiVersion: '0.0.9',
-        language: 'wasm/assemblyscript',
-        entities: ['Token', 'Pool', 'PoolToken', 'PoolEvent', 'PriceAggregatorProxy'],
-        abis: PriceOracleTemplate.mapping.abis,
-        blockHandlers: [
-          {
-            handler: 'handleProxyStart',
-            filter: {
-              kind: 'once',
-            },
-          },
-        ],
-        file: './src/oracleMapping.ts',
       },
     })
   }
