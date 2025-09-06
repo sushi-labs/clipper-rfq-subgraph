@@ -120,7 +120,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     inCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
     inCoveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal
     // If the price source is not oracle, we want to update the token price to the cove price
-    if (inAsset.priceSource === null || inAsset.priceSource === COVE_PRICE_SOURCE || inAsset.priceSource === SNAPSHOT_PRICE_SOURCE) {
+    if (inAsset.priceSource === null || inAsset.priceSource == COVE_PRICE_SOURCE || inAsset.priceSource == SNAPSHOT_PRICE_SOURCE) {
       inAsset.priceUSD = inputPrice
       inAsset.priceSource = COVE_PRICE_SOURCE
       inAsset.priceUpdatedAt = event.block.timestamp.toI32()
@@ -136,7 +136,7 @@ export function handleCoveSwapped(event: CoveSwapped): void {
     outCovePoolTokenAmount = coveAssetPrice.get('poolTokenBalance') as BigDecimal
     outCoveLiquidity = coveAssetPrice.get('coveLiquidity') as BigDecimal
     // If the price source is not oracle, we want to update the token price to the cove price
-    if (outAsset.priceSource === null || outAsset.priceSource === COVE_PRICE_SOURCE || outAsset.priceSource === SNAPSHOT_PRICE_SOURCE) {
+    if (outAsset.priceSource === null || outAsset.priceSource == COVE_PRICE_SOURCE || outAsset.priceSource == SNAPSHOT_PRICE_SOURCE) {
       outAsset.priceUSD = outputPrice
       outAsset.priceSource = COVE_PRICE_SOURCE
       outAsset.priceUpdatedAt = event.block.timestamp.toI32()

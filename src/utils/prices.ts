@@ -1,8 +1,8 @@
-import { Address, BigDecimal, BigInt, DataSourceContext, ethereum, log } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, DataSourceContext, ethereum } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from './index'
 import { AggregatorV3Interface } from '../../types/templates/ClipperCommonExchangeV0/AggregatorV3Interface'
 import { FallbackAssetPrice, DailyFallbackPrices } from '../addresses'
-import { BIG_DECIMAL_ZERO, ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
+import { ONE_DAY, ORACLE_PRICE_SOURCE, SNAPSHOT_PRICE_SOURCE } from '../constants'
 import { getOpenTime } from './time'
 import { PriceAggregatorProxy, Token } from '../../types/schema'
 import { PriceOracle as PriceOracleTemplate } from '../../types/templates'
@@ -127,7 +127,7 @@ export function getTokenUsdPrice(token: Token, block: ethereum.Block): TokenPric
     updatePriceAggregatorProxyDaily(priceAggregatorProxyAddress, block)
   }
   let savedTokenPriceUsd = token.priceUSD
-  if (token.priceSource === ORACLE_PRICE_SOURCE && savedTokenPriceUsd !== null) {
+  if (token.priceSource == ORACLE_PRICE_SOURCE && savedTokenPriceUsd !== null) {
     // Check if price is less than a day old when using oracle and return cached price
     // This allow us to keep the price up to date in case the aggregator event is not emitted as a fallback
     let timeSinceLastUpdate = block.timestamp.toI32() - token.priceUpdatedAt

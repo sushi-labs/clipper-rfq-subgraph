@@ -53,7 +53,7 @@ export class PoolHelpers {
       pool.feesTakenTransactionCount = BIG_INT_ZERO
       pool.totalRevenueUSDTaken = BIG_DECIMAL_ZERO
 
-      if (this.sourceAbi === 'BladeVerifiedExchange') {
+      if (this.sourceAbi == 'BladeVerifiedExchange') {
         pool.feeSplitPoolTokens = BIG_INT_ZERO
       } else {
         let feeSplitAddresses = ClipperFeeSplitAddressesByPool.get(this.poolAddress)

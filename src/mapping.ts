@@ -52,7 +52,7 @@ export function handleDeposited(event: Deposited): void {
   }
 
   pool.poolTokensSupply = poolTokenSupply
-  if (poolContractAbiName === 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange') {
     pool.feeSplitPoolTokens = poolTokenSupply
   }
   pool.depositCount = pool.depositCount.plus(BIG_INT_ONE)
@@ -102,7 +102,7 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   poolEvent.poolTokensSupply = poolTokenSupply
 
   pool.poolTokensSupply = poolTokenSupply
-  if (poolContractAbiName === 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange') {
     pool.feeSplitPoolTokens = poolTokenSupply
   }
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
@@ -184,7 +184,7 @@ export function handleSwapped(event: Swapped): void {
   let inTokenBalanceUsd = inputPrice.times(inTokenBalance)
   let outTokenBalanceUsd = outputPrice.times(outTokenBalance)
   // if both assets are the same, update just one with the subtraction of both amounts
-  if (inAsset.id === outAsset.id) {
+  if (inAsset.id == outAsset.id) {
     inAsset.txCount = inAsset.txCount.plus(BIG_INT_ONE)
     inAsset.volume = inAsset.volume.plus(amountIn.plus(amountOut).div(BigDecimal.fromString('2')))
     inAsset.volumeUSD = inAsset.volumeUSD.plus(transactionVolume)
@@ -286,7 +286,7 @@ export function handleTransfer(event: Transfer): void {
     return
   }
 
-  if (poolContractAbiName === 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange') {
     // Blade contracts don't use fee split contracts
     return
   }
