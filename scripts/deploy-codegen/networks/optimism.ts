@@ -34,6 +34,12 @@ export function getOptimismDeploymentConfig(): Deployment {
         startBlock: 12747954,
       },
     ],
+    registers: [
+      {
+        address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
+        startBlock: 140694849,
+      },
+    ],
     coves: [
       {
         address: '0x93baB043d534FbFDD13B405241be9267D393b827',
