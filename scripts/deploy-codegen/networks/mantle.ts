@@ -22,6 +22,13 @@ export function getMantleDeploymentConfig(): Deployment {
 
     prune: Math.floor((1.5 * 30 * 24 * 60 * 60) / 2), // 1.5 months of blocks with 2s block time
 
+    registers: [
+      {
+        address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
+        startBlock: 86434192,
+      },
+    ],
+
     priceOracles: [
       {
         tokens: ['0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111'],
