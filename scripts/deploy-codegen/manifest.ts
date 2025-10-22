@@ -791,6 +791,97 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
           }
         }
       }
+    } else if (sourceAbi === 'BladeCommonExchangeV0') {
+      for (const pool of config.poolsBySourceAbi.BladeCommonExchangeV0 || []) {
+        // Get handlers other than Transfer
+        const baseEventHandlers = (BladeCommonExchangeV0Template.mapping.eventHandlers || []).flatMap(
+          ({ calls, ...handler }) => {
+            if (handler.handler === 'handleTransfer') {
+              return []
+            }
+            return [
+              {
+                ...handler,
+                calls
+              },
+            ]
+          },
+        )
+
+        // Define the Transfer handler object
+        const transferEventHandler = {
+          event: 'Transfer(indexed address,indexed address,uint256)',
+          handler: 'handleTransfer',
+        }
+
+        // Conditionally include the Transfer handler if needed
+        const finalEventHandlers =
+          pool.permitRouter
+            ? [...baseEventHandlers, transferEventHandler]
+            : baseEventHandlers
+
+        dataSources.push({
+          ...BladeCommonExchangeV0Template,
+          name: `${pool.contractAbiName}_${pool.address}`,
+          network: config.networkName,
+          source: {
+            abi: BladeCommonExchangeV0Template.source.abi,
+            address: pool.address,
+            startBlock: pool.startBlock,
+          },
+          context: {
+            contractAbiName: { type: 'String', data: pool.contractAbiName },
+          },
+          mapping: {
+            ...BladeCommonExchangeV0Template.mapping,
+            eventHandlers: finalEventHandlers,
+          },
+        })
+
+        for (const vault of pool.vaults || []) {
+          if (vault.type === 'FARM') {
+            dataSources.push({
+              ...VaultFarmTemplate,
+              name: `VaultFarm_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultFarmTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+              context: {
+                farmingHelper: { type: 'String', data: vault.farmingHelper },
+                abi: { type: 'String', data: vault.abi },
+              },
+            })
+          } else if (vault.type === 'PROTOCOL_DEPOSIT') {
+            dataSources.push({
+              ...VaultProtocolDepositTemplate,
+              name: `VaultProtocolDeposit_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultProtocolDepositTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+              context: {
+                transferHelper: { type: 'String', data: vault.transferHelper },
+              },
+            })
+          } else if (vault.type === 'FEE_SPLIT') {
+            dataSources.push({
+              ...VaultFeeSplitTemplate,
+              name: `VaultFeeSplit_${vault.address}`,
+              network: config.networkName,
+              source: {
+                ...VaultFeeSplitTemplate.source,
+                address: vault.address,
+                startBlock: vault.startBlock,
+              },
+            })
+          }
+        }
+      }
     }
   }
 
