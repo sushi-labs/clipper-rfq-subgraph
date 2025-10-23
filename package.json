@@ -18,7 +18,7 @@
     "deploy:polygon": "graph deploy clipper-polygon",
     "deploy:optimism": "graph deploy clipper-optimism",
     "deploy:moonbeam": "graph deploy clipper-moonbeam",
-    "deploy:mantle": "goldsky subgraph deploy blade/v1-mantle --path .",
+    "deploy:mantle": "goldsky subgraph deploy blade/v3-mantle --path .",
     "deploy:ethereum": "graph deploy clipper-mainnet",
     "deploy:arbitrum": "graph deploy clipper-arbitrum",
     "deploy:base": "graph deploy clipper-base",
