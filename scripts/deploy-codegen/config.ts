@@ -100,6 +100,7 @@ export const networkChainMap: Record<string, { chain: Chain; rpcUrl?: string }> 
   base: { chain: chains.base },
   mantle: { chain: chains.mantle },
   'polygon-zkevm': { chain: chains.polygonZkEvm },
+  bsc: { chain: chains.bsc },
   katana: { 
     chain: {
       id: 747474,

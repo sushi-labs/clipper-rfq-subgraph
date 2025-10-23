@@ -22,6 +22,7 @@ import {
   generateSubgraphManifest,
   TokenMap,
 } from './deploy-codegen/manifest'
+import { getBinanceDeploymentConfig } from './deploy-codegen/networks/binance'
 
 // Helper function to get the deployment for a source
 const getDeploymentForSource = (source: string): Deployment => {
@@ -54,6 +55,9 @@ const getDeploymentForSource = (source: string): Deployment => {
       break
     case 'katana':
       deploymentPartial = getKatanaDeploymentConfig()
+      break
+    case 'bsc':
+      deploymentPartial = getBinanceDeploymentConfig()
       break
     default:
       throw new Error(`Unsupported deployment source: ${source}`)
