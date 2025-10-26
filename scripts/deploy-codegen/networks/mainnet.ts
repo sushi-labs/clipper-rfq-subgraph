@@ -63,6 +63,13 @@ export function getMainnetDeploymentConfig(): Deployment {
         sourceAbi: 'ClipperCove',
       },
     ],
+    registers: [
+      {
+        address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
+        startBlock: 23600491,
+        sourceAbi: 'BladePoolRegisterV1',
+      },
+    ],
 
     addressZeroMap: {
       symbol: 'ETH',

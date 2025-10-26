@@ -38,6 +38,7 @@ export function getOptimismDeploymentConfig(): Deployment {
       {
         address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
         startBlock: 140694849,
+        sourceAbi: 'BladePoolRegisterV0',
       },
     ],
     coves: [

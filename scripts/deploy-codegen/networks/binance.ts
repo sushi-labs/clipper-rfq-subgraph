@@ -9,6 +9,7 @@ export function getBinanceDeploymentConfig(): Deployment {
       {
         address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
         startBlock: 65559582,
+        sourceAbi: 'BladePoolRegisterV0',
       },
     ],
     addressZeroMap: {

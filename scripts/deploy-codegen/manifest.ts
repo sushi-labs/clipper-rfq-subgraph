@@ -554,9 +554,9 @@ const LpTransferTemplate: Omit<DataSourceTemplate, 'network'> = {
   },
 }
 
-const BladePoolRegisterTemplate: Omit<DataSourceTemplate, 'network'> = {
+const BladePoolRegisterV0Template: Omit<DataSourceTemplate, 'network'> = {
   kind: 'ethereum/contract',
-  name: 'BladePoolRegister',
+  name: 'BladePoolRegisterV0',
   source: {
     abi: 'BladePoolRegisterV0',
   },
@@ -586,6 +586,30 @@ const BladePoolRegisterTemplate: Omit<DataSourceTemplate, 'network'> = {
       },
     ],
     file: './src/mappingBladePoolRegister.ts',
+  },
+}
+
+const BladePoolRegisterV1Template: Omit<DataSourceTemplate, 'network'> = {
+  ...BladePoolRegisterV0Template,
+  name: 'BladePoolRegisterV1',
+  source: {
+    abi: 'BladePoolRegisterV1',
+  },
+  mapping: {
+    ...BladePoolRegisterV0Template.mapping,
+    abis: [
+      {
+        name: 'BladePoolRegisterV1',
+        file: './abis/BladePoolRegisterV1.json',
+      },
+    ],
+    eventHandlers: [
+      {
+        event: 'BladeApproximateExchangeCreated(indexed address,address[],address[])',
+        handler: 'handleBladeApproximateExchangeCreated',
+      },
+      ...(BladePoolRegisterV0Template.mapping.eventHandlers || []),
+    ],
   },
 }
 
@@ -693,13 +717,14 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
     { network: config.networkName, ...VaultProtocolDepositTemplate },
     { network: config.networkName, ...VaultFeeSplitTemplate },
     { network: config.networkName, ...LpTransferTemplate },
-    { network: config.networkName, ...BladePoolRegisterTemplate },
+    { network: config.networkName, ...BladePoolRegisterV0Template },
+    { network: config.networkName, ...BladePoolRegisterV1Template },
     { network: config.networkName, ...BladeCommonExchangeV0Template },
   ]
   const dataSources: DataSource[] = []
 
   // Add pool data sources
-  for (const sourceAbi of PoolSourceAbiSet.values()) {
+  for (const sourceAbi of Array.from(PoolSourceAbiSet.values())) {
     if (sourceAbi === 'ClipperCommonExchangeV0') {
       for (const pool of config.poolsBySourceAbi.ClipperCommonExchangeV0 || []) {
         // Get handlers other than Transfer
@@ -933,16 +958,20 @@ export function generateSubgraphManifest(config: SubgraphsManifestDeploymentBase
   }
 
   for (const bladePoolRegister of config.registers || []) {
+    const template = bladePoolRegister.sourceAbi === 'BladePoolRegisterV1'
+      ? BladePoolRegisterV1Template
+      : BladePoolRegisterV0Template
+
     dataSources.push({
-      ...BladePoolRegisterTemplate,
-      name: `BladePoolRegister_${bladePoolRegister.address}`,
+      ...template,
+      name: `${bladePoolRegister.sourceAbi}_${bladePoolRegister.address}`,
       network: config.networkName,
       source: {
-        abi: BladePoolRegisterTemplate.source.abi,
+        abi: template.source.abi,
         address: bladePoolRegister.address,
         startBlock: bladePoolRegister.startBlock,
       },
-      mapping: BladePoolRegisterTemplate.mapping,
+      mapping: template.mapping,
     })
   }
 

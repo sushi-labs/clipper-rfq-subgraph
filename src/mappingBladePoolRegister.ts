@@ -3,9 +3,11 @@ import {
   BladeLPTransferCreated,
   BladePermitRouterCreated,
   BladeVerifiedExchangeCreated,
-} from '../types/templates/BladePoolRegister/BladePoolRegisterV0'
+} from '../types/templates/BladePoolRegisterV0/BladePoolRegisterV0'
+import { BladeApproximateExchangeCreated } from '../types/templates/BladePoolRegisterV1/BladePoolRegisterV1'
 import { Pool, PoolLpTransfer } from '../types/schema'
 import { BladeCommonExchangeV0, PriceOracleProxy } from '../types/templates'
+
 
 export function handleBladeLPTransferCreated(event: BladeLPTransferCreated): void {
   let lpTransfer = new PoolLpTransfer(event.params.lpTransferAddress)
@@ -29,7 +31,22 @@ export function handleBladeVerifiedExchangeCreated(event: BladeVerifiedExchangeC
   let context = new DataSourceContext()
   context.setString('contractAbiName', 'BladeVerifiedExchange')
   BladeCommonExchangeV0.createWithContext(event.params.exchangeAddress, context)
-  
+
+  for (let i = 0; i < event.params.oracles.length; i++) {
+    let oracleAddress = event.params.oracles[i]
+    let tokenAddress = event.params.tokens[i]
+    let context = new DataSourceContext()
+    context.setString('proxyAddress', oracleAddress.toHexString())
+    context.setString('tokenAddress', tokenAddress.toHexString())
+    PriceOracleProxy.createWithContext(oracleAddress, context)
+  }
+}
+
+export function handleBladeApproximateExchangeCreated(event: BladeApproximateExchangeCreated): void {
+  let context = new DataSourceContext()
+  context.setString('contractAbiName', 'BladeApproximateExchange')
+  BladeCommonExchangeV0.createWithContext(event.params.exchangeAddress, context)
+
   for (let i = 0; i < event.params.oracles.length; i++) {
     let oracleAddress = event.params.oracles[i]
     let tokenAddress = event.params.tokens[i]

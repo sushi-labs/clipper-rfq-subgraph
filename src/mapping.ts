@@ -52,7 +52,7 @@ export function handleDeposited(event: Deposited): void {
   }
 
   pool.poolTokensSupply = poolTokenSupply
-  if (poolContractAbiName == 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange' || poolContractAbiName == 'BladeApproximateExchange') {
     pool.feeSplitPoolTokens = poolTokenSupply
   }
   pool.depositCount = pool.depositCount.plus(BIG_INT_ONE)
@@ -102,7 +102,7 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   poolEvent.poolTokensSupply = poolTokenSupply
 
   pool.poolTokensSupply = poolTokenSupply
-  if (poolContractAbiName == 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange' || poolContractAbiName == 'BladeApproximateExchange') {
     pool.feeSplitPoolTokens = poolTokenSupply
   }
   pool.withdrawalCount = pool.withdrawalCount.plus(BIG_INT_ONE)
@@ -286,7 +286,7 @@ export function handleTransfer(event: Transfer): void {
     return
   }
 
-  if (poolContractAbiName == 'BladeVerifiedExchange') {
+  if (poolContractAbiName == 'BladeVerifiedExchange' || poolContractAbiName == 'BladeApproximateExchange') {
     // Blade contracts don't use fee split contracts
     return
   }

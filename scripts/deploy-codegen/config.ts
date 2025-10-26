@@ -3,7 +3,11 @@ import * as chains from 'viem/chains'
 
 export type PoolSourceAbi = 'ClipperCommonExchangeV0' | 'BladeCommonExchangeV0'
 
-export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set(['ClipperCommonExchangeV0', 'BladeCommonExchangeV0'])
+export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set(['ClipperCommonExchangeV0', 'BladeCommonExchangeV0'] as PoolSourceAbi[])
+
+export type RegisterSourceAbi = 'BladePoolRegisterV0' | 'BladePoolRegisterV1'
+
+export const RegisterSourceAbiSet: Set<RegisterSourceAbi> = new Set(['BladePoolRegisterV0', 'BladePoolRegisterV1'] as RegisterSourceAbi[])
 
 type VaultCommon = {
   startBlock: number
@@ -65,6 +69,7 @@ export interface LpTransferSourceConfig {
 export interface BladePoolRegisterConfig {
   address: string
   startBlock: number
+  sourceAbi: RegisterSourceAbi
 }
 
 export interface Deployment {

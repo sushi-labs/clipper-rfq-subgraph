@@ -26,6 +26,7 @@ export function getMantleDeploymentConfig(): Deployment {
       {
         address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
         startBlock: 86434192,
+        sourceAbi: 'BladePoolRegisterV0',
       },
     ],
 

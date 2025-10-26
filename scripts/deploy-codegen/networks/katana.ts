@@ -9,6 +9,7 @@ export function getKatanaDeploymentConfig(): Deployment {
       {
         address: '0xe56a524F7F35d39E5d5C34428De497da29D4B88b',
         startBlock: 4473857,
+        sourceAbi: 'BladePoolRegisterV0',
       },
     ],
     addressZeroMap: {
