@@ -15,9 +15,9 @@ export function getBaseDeploymentConfig(): Deployment {
     coves: [],
     registers: [
       {
-        address: '0x2E32C76b4F50698f96fdd8Ff4aF0BD5d45F9399d',
-        startBlock: 35021560,
-        sourceAbi: 'BladePoolRegisterV0',
+        address: '0x80A06bBAB131eeeb78cac159F9DDEcF8e9a6AbF6',
+        startBlock: 37354219,
+        sourceAbi: 'BladePoolRegisterV1',
       },
     ],
     addressZeroMap: {

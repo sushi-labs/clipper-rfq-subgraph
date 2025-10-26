@@ -7,8 +7,8 @@ export function getKatanaDeploymentConfig(): Deployment {
     coves: [],
     registers: [
       {
-        address: '0xe56a524F7F35d39E5d5C34428De497da29D4B88b',
-        startBlock: 4473857,
+        address: '0x7ac96b46293F65951d70C0fCAd18947EFbEe42F7',
+        startBlock: 14755195,
         sourceAbi: 'BladePoolRegisterV0',
       },
     ],
