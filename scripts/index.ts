@@ -205,6 +205,13 @@ yargs(hideBin(process.argv))
               return options.inverse(this)
             }
           })
+          handlebars.registerHelper('ifNotZero', function(price: number, options: any) {
+            if (price !== 0) {
+              return options.fn(this)
+            } else {
+              return options.inverse(this)
+            }
+          })
           const compile = handlebars.compile(templateContent)
           // Use the specifically prepared handlebarsData
           const replaced = compile(manifestBase)

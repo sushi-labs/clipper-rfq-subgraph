@@ -3,11 +3,17 @@ import * as chains from 'viem/chains'
 
 export type PoolSourceAbi = 'ClipperCommonExchangeV0' | 'BladeCommonExchangeV0'
 
-export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set(['ClipperCommonExchangeV0', 'BladeCommonExchangeV0'] as PoolSourceAbi[])
+export const PoolSourceAbiSet: Set<PoolSourceAbi> = new Set([
+  'ClipperCommonExchangeV0',
+  'BladeCommonExchangeV0',
+] as PoolSourceAbi[])
 
 export type RegisterSourceAbi = 'BladePoolRegisterV0' | 'BladePoolRegisterV1'
 
-export const RegisterSourceAbiSet: Set<RegisterSourceAbi> = new Set(['BladePoolRegisterV0', 'BladePoolRegisterV1'] as RegisterSourceAbi[])
+export const RegisterSourceAbiSet: Set<RegisterSourceAbi> = new Set([
+  'BladePoolRegisterV0',
+  'BladePoolRegisterV1',
+] as RegisterSourceAbi[])
 
 type VaultCommon = {
   startBlock: number
@@ -17,18 +23,18 @@ type VaultCommon = {
 type FarmAbi = 'SplitFeeFarm' | 'LinearVestingVault'
 
 export type PoolFarmVault = VaultCommon & {
-  type: "FARM"
+  type: 'FARM'
   farmingHelper: string
   abi: FarmAbi
 }
 
 export type PoolProtocolDepositVault = VaultCommon & {
-  type: "PROTOCOL_DEPOSIT"
+  type: 'PROTOCOL_DEPOSIT'
   transferHelper: string
 }
 
 export type PoolFeeSplitVault = VaultCommon & {
-  type: "FEE_SPLIT"
+  type: 'FEE_SPLIT'
 }
 
 export type PoolVault = PoolFarmVault | PoolProtocolDepositVault | PoolFeeSplitVault
@@ -106,21 +112,7 @@ export const networkChainMap: Record<string, { chain: Chain; rpcUrl?: string }> 
   mantle: { chain: chains.mantle },
   'polygon-zkevm': { chain: chains.polygonZkEvm },
   bsc: { chain: chains.bsc },
-  katana: { 
-    chain: {
-      id: 747474,
-      name: 'Katana',
-      network: 'katana',
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-      rpcUrls: {
-        default: { http: ['http://localhost:5050'] },
-        public: { http: ['http://localhost:5050'] },
-      },
-      blockExplorers: {
-        default: { name: 'Katana Explorer', url: 'http://localhost:5050' },
-      },
-    } as Chain,
-  },
+  katana: { chain: chains.katana },
 }
 
 export type SubgraphsManifestDeploymentBase = Omit<Deployment, 'pools' | 'priceOracles' | 'lpTransferSources'> & {

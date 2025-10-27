@@ -37,7 +37,9 @@ export let DailyFallbackPrices = new TypedMap<Address, TypedMap<string, string>>
 {{#each dailyFallbackPrices}}
 let prices_{{@key}} = new TypedMap<string, string>()
 {{#each this}}
+{{#ifNotZero price}}
 prices_{{tokenAddress}}.set('{{timestamp}}', '{{price}}')
+{{/ifNotZero}}
 {{/each}}
 DailyFallbackPrices.set(Address.fromString('{{@key}}'), prices_{{@key}})
 {{/each}}

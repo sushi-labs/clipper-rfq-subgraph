@@ -5,7 +5,7 @@
     "script": "tsx scripts",
     "build": "graph build",
     "pre:codegen:polygon": "rimraf types && yarn script template --deployment matic",
-    "pre:codegen:optimism": "rimraf types && yarn script template --deployment optimism",
+    "pre:codegen:optimism": "rimraf types && yarn script template --deployment optimism --fallback-prices-start-date 2022-02-03 --fallback-prices-end-date 2022-11-26 --fallback-prices-tokens OP WBTC",
     "pre:codegen:moonbeam": "rimraf types && yarn script template --deployment moonbeam  --fallback-prices-start-date 2022-01-10 --fallback-prices-end-date 2022-06-18 --fallback-prices-tokens WETH WBTC",
     "pre:codegen:ethereum": "rimraf types && yarn script template --deployment ethereum",
     "pre:codegen:arbitrum": "rimraf types && yarn script template --deployment arbitrum",
@@ -27,8 +27,8 @@
     "deploy:bsc": "graph deploy blade-binance"
   },
   "dependencies": {
-    "@graphprotocol/graph-cli": "0.97.1",
-    "@graphprotocol/graph-ts": "0.38.1",
+    "@graphprotocol/graph-cli": "0.98.1",
+    "@graphprotocol/graph-ts": "0.38.2",
     "axios": "^1.8.2"
   },
   "devDependencies": {
@@ -45,7 +45,7 @@
     "rimraf": "^6.0.1",
     "tsx": "^4.19.4",
     "typescript": "^5.0.0",
-    "viem": "^2.28.3",
+    "viem": "^2.38.0",
     "yargs": "^17.3.1"
   }
 }

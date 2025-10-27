@@ -27,6 +27,13 @@ export function getOptimismDeploymentConfig(): Deployment {
         contractAbiName: 'ClipperPackedExchange',
         sourceAbi: 'ClipperCommonExchangeV0',
       },
+      {
+        address: '0x663fA8731045765067e2B5b6acB19BE2ce974C7f',
+        startBlock: 141563622,
+        permitRouter: '0xa5fC5A373D66C109f68006A60434D3e798EcF3c6',
+        contractAbiName: 'BladeVerifiedExchange',
+        sourceAbi: 'BladeCommonExchangeV0',
+      },
     ],
     lpTransfers: [
       {
@@ -76,7 +83,7 @@ export function getOptimismDeploymentConfig(): Deployment {
         sourceAbi: 'AggregatorV3Interface',
       },
       {
-        tokens: ['0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'],
+        tokens: ['0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', '0x4F13a96EC5C4Cf34e442b46Bbd98a0791F20edC3'],
         address: '0x8dBa75e83DA73cc766A7e5a0ee71F656BAb470d6',
         startBlock: 2771253,
         contractAbiName: 'AggregatorV3Interface',
