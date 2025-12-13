@@ -79,7 +79,7 @@ function handleWithdrawnEvent(event: ethereum.Event, poolTokensWithdrawn: BigInt
   let pool = poolHelpers.loadPool()
   let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
   let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
-  let poolTokenSupply = pool.poolTokensSupply.minus(poolTokensWithdrawn)
+  let poolTokenSupply = allTokensBalance.value2
   let totalPoolTokens = convertTokenToDecimal(poolTokenSupply, 18)
   let burntPoolTokens = convertTokenToDecimal(poolTokensWithdrawn, 18)
 
@@ -321,6 +321,9 @@ export function handleFeesTaken(event: FeesTaken): void {
   let poolContractAbiName = context.getString('contractAbiName')
   let poolHelpers = new PoolHelpers(event.address, poolContractAbiName, event.block)
   let pool = poolHelpers.loadPool()
+  let allTokensBalance = poolHelpers.eth_getPoolAllTokensBalance()
+  let currentPoolLiquidity = poolHelpers.updatePoolTokensLiquidity(allTokensBalance)
+  let poolTokenSupply = allTokensBalance.value2
   
   let entitledFeesInDollars = event.params.entitledFeesInDollars
   let averagePoolBalanceInDollars = event.params.averagePoolBalanceInDollars
@@ -334,14 +337,14 @@ export function handleFeesTaken(event: FeesTaken): void {
   poolRevenue.timestamp = event.block.timestamp.toI32()
   poolRevenue.pool = event.address
   
-  let poolTokenSupply = pool.poolTokensSupply
-  if (poolTokenSupply.gt(BIG_INT_ZERO) && pool.poolValueUSD.gt(BIG_DECIMAL_ZERO)) {
-    let poolTokenRatio = tokensTransferred.toBigDecimal().div(poolTokenSupply.toBigDecimal())
-    poolRevenue.valueInUsd = pool.poolValueUSD.times(poolTokenRatio)
-  } else {
-    poolRevenue.valueInUsd = BIG_DECIMAL_ZERO
-  }
+  let poolTokenRatio = tokensTransferred.toBigDecimal().div(poolTokenSupply.toBigDecimal())
+  poolRevenue.valueInUsd = currentPoolLiquidity.times(poolTokenRatio)
 
+  pool.poolTokensSupply = poolTokenSupply
+  if (poolContractAbiName == 'BladeVerifiedExchange' || poolContractAbiName == 'BladeApproximateExchange') {
+    pool.feeSplitPoolTokens = poolTokenSupply
+  }
+  pool.poolValueUSD = currentPoolLiquidity
   pool.totalRevenueUSDTaken = pool.totalRevenueUSDTaken.plus(poolRevenue.valueInUsd)
   pool.totalFeesTaken = pool.totalFeesTaken.plus(tokensTransferred)
   pool.feesTakenTransactionCount = pool.feesTakenTransactionCount.plus(BIG_INT_ONE)
